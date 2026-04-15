@@ -1,0 +1,139 @@
+{% extends 'base.html' %}
+{% block title %}Dashboard · CRM Castanheira{% endblock %}
+{% block page_title %}Bom dia, Dr. Jardel 👋{% endblock %}
+{% block page_sub %}{{ hoje.strftime('%A, %d de %B de %Y') }} · Castanheira e Reis Advogados Associados{% endblock %}
+{% block topbar_actions %}
+  <a href="/publicacoes" class="btn btn-gold">+ Registrar Publicação</a>
+{% endblock %}
+{% block content %}
+
+{% if prazos_urgentes > 0 %}
+<div class="alert alert-red" style="display:flex;align-items:center;gap:10px">
+  <span style="font-size:18px">⚡</span>
+  <span><strong>{{ prazos_urgentes }} prazo(s) urgente(s)</strong> vence(m) em até 48 horas. <a href="/prazos" style="color:var(--red-t);font-weight:600">Ver agora →</a></span>
+</div>
+{% endif %}
+{% if fin_vencidos > 0 %}
+<div class="alert alert-amber" style="display:flex;align-items:center;gap:10px;margin-top:.5rem">
+  <span style="font-size:18px">💰</span>
+  <span><strong>{{ fin_vencidos }} lançamento(s) financeiro(s) vencido(s)</strong> sem baixa. <a href="/financeiro?status=pendente" style="color:var(--amber-t);font-weight:600">Ver agora →</a></span>
+</div>
+{% endif %}
+
+<div class="metrics">
+  <div class="metric" style="border-left:3px solid var(--blue)">
+    <div class="metric-label">Processos Ativos</div>
+    <div class="metric-value">{{ processos_ativos }}</div>
+    <div class="metric-sub">Divinópolis/MG</div>
+  </div>
+  <div class="metric" style="border-left:3px solid var(--red)">
+    <div class="metric-label">Prazos Urgentes</div>
+    <div class="metric-value" style="color:var(--red)">{{ prazos_urgentes }}</div>
+    <div class="metric-sub">Até 48 horas</div>
+  </div>
+  <div class="metric" style="border-left:3px solid var(--amber)">
+    <div class="metric-label">Tarefas Abertas</div>
+    <div class="metric-value" style="color:var(--amber)">{{ tarefas_abertas }}</div>
+    <div class="metric-sub"><a href="/tarefas" style="color:var(--amber-t)">Ver tarefas</a></div>
+  </div>
+  <div class="metric" style="border-left:3px solid var(--gold)">
+    <div class="metric-label">Publicações Não Tratadas</div>
+    <div class="metric-value" style="{% if pubs_nao_tratadas > 0 %}color:var(--amber){% endif %}">{{ pubs_nao_tratadas }}</div>
+    <div class="metric-sub"><a href="/publicacoes" style="color:var(--amber-t)">Tratar agora</a></div>
+  </div>
+  <div class="metric" style="border-left:3px solid var(--green)">
+    <div class="metric-label">Clientes</div>
+    <div class="metric-value" style="color:var(--green)">{{ clientes_total }}</div>
+    <div class="metric-sub"><a href="/clientes" style="color:var(--green-t)">Ver carteira</a></div>
+  </div>
+  <div class="metric" style="border-left:3px solid var(--gold)">
+    <div class="metric-label">A Receber</div>
+    <div class="metric-value" style="color:var(--gold);font-size:20px">R$ {{ '%.0f'|format(fin_a_receber) }}</div>
+    <div class="metric-sub"><a href="/financeiro?tipo=receber" style="color:#7a5a00">{% if fin_vencidos > 0 %}{{ fin_vencidos }} vencido(s){% else %}Ver financeiro{% endif %}</a></div>
+  </div>
+</div>
+
+<div class="grid2">
+  <div class="card">
+    <div class="card-header">
+      <span class="card-title">Próximos Prazos</span>
+      <a href="/prazos" class="btn btn-outline btn-sm">Ver todos</a>
+    </div>
+    <div style="padding:0 1.1rem">
+      {% for p in proximos_prazos %}
+      <div class="tl-item">
+        <div class="tl-dot {% if p.urgencia=='urgente' or p.urgencia=='vencido' %}dot-red{% elif p.urgencia=='atencao' %}dot-amber{% else %}dot-green{% endif %}"></div>
+        <div class="tl-info">
+          <div class="tl-title">{{ p.tipo }}</div>
+          <div class="tl-sub">{{ p.processo.numero if p.processo else '—' }}</div>
+        </div>
+        <div class="tl-date" style="{% if p.urgencia=='urgente' or p.urgencia=='vencido' %}color:var(--red);font-weight:600{% elif p.urgencia=='atencao' %}color:var(--amber);font-weight:600{% endif %}">
+          {% if p.dias_restantes == 0 %}Hoje
+          {% elif p.dias_restantes == 1 %}Amanhã
+          {% elif p.dias_restantes < 0 %}VENCIDO
+          {% else %}{{ p.dias_restantes }}d
+          {% endif %}
+        </div>
+      </div>
+      {% else %}
+      <div class="empty"><div class="empty-icon">✅</div><div class="empty-text">Nenhum prazo pendente.</div></div>
+      {% endfor %}
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-header">
+      <span class="card-title">Tarefas Abertas</span>
+      <a href="/tarefas" class="btn btn-gold btn-sm">+ Nova</a>
+    </div>
+    <div style="padding:0 1.1rem">
+      {% for t in ultimas_tarefas %}
+      <div class="tl-item">
+        <div class="tl-dot {% if t.prioridade=='urgente' %}dot-red{% elif t.prioridade=='normal' %}dot-amber{% else %}dot-green{% endif %}"></div>
+        <div class="tl-info">
+          <div class="tl-title">{{ t.titulo }}</div>
+          <div class="tl-sub">{{ t.origem }} · {{ t.tipo }}</div>
+        </div>
+        <div class="tl-date">{{ t.criado_em.strftime('%d/%m') }}</div>
+      </div>
+      {% else %}
+      <div class="empty"><div class="empty-icon">🎉</div><div class="empty-text">Nenhuma tarefa aberta.</div></div>
+      {% endfor %}
+    </div>
+  </div>
+</div>
+
+<div class="card">
+  <div class="card-header">
+    <span class="card-title">Últimas Publicações</span>
+    <a href="/publicacoes" class="btn btn-outline btn-sm">Ver todas</a>
+  </div>
+  <table>
+    <thead><tr><th>Data</th><th>Processo</th><th>Tipo</th><th>Efeito</th><th>Status</th></tr></thead>
+    <tbody>
+    {% for pub in ultimas_pubs %}
+    <tr>
+      <td>{{ pub.data_pub.strftime('%d/%m/%Y') }}</td>
+      <td style="font-family:monospace;font-size:11px">{{ pub.pje_numero or (pub.processo.numero if pub.processo else '—') }}</td>
+      <td>{{ pub.tipo }}</td>
+      <td>
+        {% if pub.tem_efeito_intimatorio %}
+          <span class="pill pill-gold">Com prazo</span>
+        {% else %}
+          <span class="pill pill-gray">Só ciência</span>
+        {% endif %}
+      </td>
+      <td>
+        {% if pub.status == 'tratada' %}<span class="pill pill-green">Tratada</span>
+        {% elif pub.status == 'descartada' %}<span class="pill pill-gray">Descartada</span>
+        {% else %}<span class="pill" style="background:#fff8e6;color:#b45309;border:1px solid #fcd34d">Pendente</span>
+        {% endif %}
+      </td>
+    </tr>
+    {% else %}
+    <tr><td colspan="5" style="text-align:center;color:var(--text3);padding:1rem">Nenhuma publicação registrada.</td></tr>
+    {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}

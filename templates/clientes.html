@@ -1,0 +1,27 @@
+{% extends 'base.html' %}
+{% block title %}Clientes · CRM Castanheira{% endblock %}
+{% block page_title %}Clientes{% endblock %}
+{% block topbar_actions %}<a href="/clientes/novo" class="btn btn-gold">+ Novo Cliente</a>{% endblock %}
+{% block content %}
+<div class="search-bar"><span class="search-icon">🔍</span>
+  <form method="get"><input type="text" name="q" value="{{ q }}" placeholder="Buscar por nome ou CPF..."></form>
+</div>
+<div class="card">
+  <div class="card-header"><span class="card-title">{{ clientes|length }} clientes cadastrados</span></div>
+  <table>
+    <thead><tr><th>Nome</th><th>CPF</th><th>Telefone</th><th>Processos</th></tr></thead>
+    <tbody>
+    {% for c in clientes %}
+    <tr>
+      <td><strong>{{ c.nome }}</strong></td>
+      <td style="font-family:monospace;font-size:11px">{{ c.cpf or '—' }}</td>
+      <td>{{ c.telefone or '—' }}</td>
+      <td>{{ c.processos|length }}</td>
+    </tr>
+    {% else %}
+    <tr><td colspan="4" style="text-align:center;padding:1.5rem;color:var(--text3)">Nenhum cliente cadastrado.</td></tr>
+    {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}

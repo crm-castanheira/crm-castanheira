@@ -1,0 +1,44 @@
+{% extends 'base.html' %}
+{% block title %}Novo Processo · CRM Castanheira{% endblock %}
+{% block page_title %}{% if processo %}Editar{% else %}Novo{% endif %} Processo{% endblock %}
+{% block content %}
+<div class="card" style="max-width:680px">
+  <div class="card-header"><span class="card-title">Dados do Processo</span></div>
+  <div class="card-body">
+    <form method="post">
+      <div class="form-group"><label>Número CNJ</label><input type="text" name="numero" value="{{ processo.numero if processo else '' }}" placeholder="0000000-00.0000.8.13.0236" required></div>
+      <div class="form-row cols2">
+        <div><label>Tipo de Ação</label>
+          <select name="tipo">
+            {% for t in ['Usucapião Extraordinário','Usucapião Ordinário','Usucapião Tabular','Extinção de Condomínio','Anulatória de Escritura Pública','Adjudicação Compulsória','Regularização de Imóvel','Anulação de Leilão Judicial','Outro'] %}
+            <option {% if processo and processo.tipo==t %}selected{% endif %}>{{ t }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div><label>Polo</label>
+          <select name="polo">
+            <option {% if processo and processo.polo=='Autor' %}selected{% endif %}>Autor</option>
+            <option {% if processo and processo.polo=='Réu' %}selected{% endif %}>Réu</option>
+            <option {% if processo and processo.polo=='Terceiro' %}selected{% endif %}>Terceiro</option>
+          </select>
+        </div>
+      </div>
+      <div><label>Cliente</label>
+        <select name="cliente_id">
+          <option value="">— Sem cliente vinculado —</option>
+          {% for c in clientes %}<option value="{{ c.id }}" {% if processo and processo.cliente_id==c.id %}selected{% endif %}>{{ c.nome }}</option>{% endfor %}
+        </select>
+      </div>
+      <div class="form-row cols2" style="margin-top:.65rem">
+        <div><label>Vara / Juízo</label><input type="text" name="vara" value="{{ processo.vara if processo else '' }}" placeholder="ex: 2ª Vara Cível"></div>
+        <div><label>Comarca</label><input type="text" name="comarca" value="{{ processo.comarca if processo else 'Divinópolis' }}"></div>
+      </div>
+      <div class="form-group"><label>Observações</label><textarea name="obs" placeholder="Resumo, estratégia, documentação necessária...">{{ processo.obs if processo else '' }}</textarea></div>
+      <div style="display:flex;gap:8px;justify-content:flex-end">
+        <a href="/processos" class="btn btn-outline">Cancelar</a>
+        <button type="submit" class="btn btn-gold">Salvar Processo</button>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,325 @@
+{% extends 'base.html' %}
+{% block title %}Publicações · CRM Castanheira{% endblock %}
+{% block page_title %}Publicações do Diário{% endblock %}
+{% block page_sub %}Publicações com efeito intimatório geram prazo + tarefa automaticamente{% endblock %}
+{% block topbar_actions %}
+<button class="btn btn-outline" onclick="document.getElementById('modal-pje').classList.add('open')">⬇ Importar PJe</button>
+<button class="btn btn-gold"    onclick="document.getElementById('modal-pub').classList.add('open')">+ Registrar Publicação</button>
+{% endblock %}
+{% block content %}
+
+<!-- CONTADOR ESTILO ASTREA -->
+<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:.75rem;margin-bottom:1.25rem">
+  <div class="metric" style="border-left:3px solid var(--amber);cursor:pointer" onclick="filtrar('pendente')">
+    <div class="metric-label">Não tratadas hoje</div>
+    <div class="metric-value" style="{% if nao_tratadas_hoje > 0 %}color:var(--amber){% endif %}">{{ nao_tratadas_hoje }}</div>
+  </div>
+  <div class="metric" style="border-left:3px solid var(--green);cursor:pointer" onclick="filtrar('tratada')">
+    <div class="metric-label">Tratadas hoje</div>
+    <div class="metric-value" style="color:var(--green)">{{ tratadas_hoje }}</div>
+  </div>
+  <div class="metric" style="border-left:3px solid var(--text3);cursor:pointer" onclick="filtrar('descartada')">
+    <div class="metric-label">Descartadas hoje</div>
+    <div class="metric-value">{{ descartadas_hoje }}</div>
+  </div>
+  <div class="metric" style="border-left:3px solid var(--red);cursor:pointer" onclick="filtrar('todas')">
+    <div class="metric-label">Não tratadas (total)</div>
+    <div class="metric-value" style="{% if total_nao_tratadas > 0 %}color:var(--red){% endif %}">{{ total_nao_tratadas }}</div>
+  </div>
+</div>
+
+<!-- FILTROS -->
+<div style="display:flex;gap:6px;margin-bottom:.85rem">
+  <button class="btn btn-outline btn-sm" id="f-todas"      onclick="filtrar('todas')"      style="border-color:var(--gold)">Todas</button>
+  <button class="btn btn-outline btn-sm" id="f-pendente"   onclick="filtrar('pendente')"  >Pendentes</button>
+  <button class="btn btn-outline btn-sm" id="f-tratada"    onclick="filtrar('tratada')"   >Tratadas</button>
+  <button class="btn btn-outline btn-sm" id="f-descartada" onclick="filtrar('descartada')">Descartadas</button>
+  <button class="btn btn-outline btn-sm" id="f-sem-efeito" onclick="filtrar('sem-efeito')">Só Ciência</button>
+</div>
+
+<!-- TABELA PIPELINE -->
+<div class="card">
+  <table id="tabela-pubs">
+    <thead>
+      <tr>
+        <th>Data</th>
+        <th>Processo</th>
+        <th>Tribunal</th>
+        <th>Tipo</th>
+        <th style="text-align:center">Efeito</th>
+        <th style="text-align:center">Prazo</th>
+        <th style="text-align:center">Tarefa</th>
+        <th style="text-align:center">Status</th>
+        <th style="text-align:right">Ações</th>
+      </tr>
+    </thead>
+    <tbody>
+    {% for pub in publicacoes %}
+    {% set tarefa = pub.tarefas[0] if pub.tarefas else none %}
+    {% set prazo  = pub.prazos_pub[0] if pub.prazos_pub else none %}
+    <tr data-status="{{ pub.status }}" data-efeito="{{ 'sim' if pub.tem_efeito_intimatorio else 'nao' }}" id="pub-row-{{ pub.id }}">
+
+      <td style="white-space:nowrap">{{ pub.data_pub.strftime('%d/%m/%Y') }}</td>
+
+      <td style="font-family:monospace;font-size:10px;max-width:150px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap"
+          title="{{ pub.pje_numero or (pub.processo.numero if pub.processo else '—') }}">
+        {{ pub.pje_numero or (pub.processo.numero if pub.processo else '—') }}
+      </td>
+
+      <td><span class="pill pill-gray" style="font-size:10px">{{ pub.pje_tribunal or pub.fonte }}</span></td>
+
+      <td style="font-size:12px">{{ pub.tipo }}</td>
+
+      <!-- EFEITO INTIMATÓRIO -->
+      <td style="text-align:center">
+        {% if pub.tem_efeito_intimatorio %}
+          <span class="pill pill-gold" style="font-size:10px">Com prazo</span>
+        {% else %}
+          <span class="pill pill-gray" style="font-size:10px">Só ciência</span>
+        {% endif %}
+      </td>
+
+      <!-- PRAZO -->
+      <td style="text-align:center;white-space:nowrap">
+        {% if not pub.tem_efeito_intimatorio %}
+          <span style="color:var(--text3);font-size:11px">—</span>
+        {% elif prazo %}
+          {% set dr = prazo.dias_restantes %}
+          {% if prazo.status == 'Cumprido' %}
+            <span class="pill pill-green" style="font-size:10px">✓ Cumprido</span>
+          {% elif dr < 0 %}
+            <span class="pill pill-red" style="font-size:10px">Vencido</span>
+          {% elif dr <= 2 %}
+            <span class="pill pill-red" style="font-size:10px">{{ dr }}d ⚡</span>
+          {% elif dr <= 7 %}
+            <span class="pill pill-gold" style="font-size:10px">{{ dr }}d</span>
+          {% else %}
+            <span class="pill pill-gray" style="font-size:10px">{{ dr }}d</span>
+          {% endif %}
+        {% else %}
+          <span class="pill" style="background:#fff0f0;color:#c00;border:1px solid #e55;font-size:10px">Pendente</span>
+        {% endif %}
+      </td>
+
+      <!-- TAREFA -->
+      <td style="text-align:center;white-space:nowrap">
+        {% if not pub.tem_efeito_intimatorio %}
+          <span style="color:var(--text3);font-size:11px">—</span>
+        {% elif tarefa %}
+          {% if tarefa.status == 'concluida' %}
+            <span class="pill pill-green" style="font-size:10px">✓ Feita</span>
+          {% else %}
+            <span class="pill" style="background:#fff8e6;color:#b45309;border:1px solid #fcd34d;font-size:10px">Aberta</span>
+          {% endif %}
+        {% else %}
+          <span class="pill pill-gray" style="font-size:10px">—</span>
+        {% endif %}
+      </td>
+
+      <!-- STATUS DA PUBLICAÇÃO -->
+      <td style="text-align:center;white-space:nowrap">
+        {% if pub.status == 'tratada' %}
+          <span class="pill pill-green" style="font-size:10px">Tratada</span>
+        {% elif pub.status == 'descartada' %}
+          <span class="pill pill-gray" style="font-size:10px">Descartada</span>
+        {% else %}
+          <span class="pill" style="background:#fff8e6;color:#b45309;border:1px solid #fcd34d;font-size:10px">Pendente</span>
+        {% endif %}
+      </td>
+
+      <!-- AÇÕES -->
+      <td style="text-align:right;white-space:nowrap">
+        <div style="display:flex;gap:4px;justify-content:flex-end;flex-wrap:nowrap">
+          {% if pub.pje_link %}
+          <a href="{{ pub.pje_link }}" target="_blank" class="btn btn-outline btn-sm" style="font-size:10px">Doc ↗</a>
+          {% endif %}
+          {% if pub.status == 'pendente' %}
+          <button class="btn btn-green btn-sm" style="font-size:10px" onclick="tratar({{ pub.id }}, this)">✓ Tratar</button>
+          <button class="btn btn-outline btn-sm" style="font-size:10px;color:var(--text3)" onclick="descartar({{ pub.id }}, this)">✕ Descartar</button>
+          {% endif %}
+        </div>
+      </td>
+
+    </tr>
+    {% else %}
+    <tr><td colspan="9" style="text-align:center;padding:1.5rem;color:var(--text3)">Nenhuma publicação registrada.</td></tr>
+    {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+<!-- MODAL IMPORTAR PJe -->
+<div class="modal-backdrop" id="modal-pje">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title">Importar Publicações do PJe</div>
+      <button class="modal-close" onclick="document.getElementById('modal-pje').classList.remove('open')">✕</button>
+    </div>
+    <p style="font-size:13px;color:var(--text2);margin-bottom:1rem">
+      Busca comunicações da OAB <strong>183408/MG</strong>. Publicações com efeito intimatório geram prazo + tarefa automaticamente. Publicações "sem efeito" ficam como <em>Só ciência</em>.
+    </p>
+    <form id="form-pje">
+      <div class="form-row cols2">
+        <div><label>Data início</label><input type="date" name="data_ini" id="pje-ini"></div>
+        <div><label>Data fim</label><input type="date" name="data_fim" id="pje-fim"></div>
+      </div>
+      <div id="pje-resultado" style="display:none;padding:.75rem;border-radius:6px;margin-bottom:.75rem;font-size:13px"></div>
+      <div style="display:flex;gap:8px;justify-content:flex-end;align-items:center">
+        <span id="pje-spin" style="display:none;font-size:12px;color:var(--text3)">Buscando…</span>
+        <button type="button" class="btn btn-outline" onclick="document.getElementById('modal-pje').classList.remove('open')">Cancelar</button>
+        <button type="submit" class="btn btn-gold" id="pje-btn">Importar</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- MODAL MANUAL -->
+<div class="modal-backdrop" id="modal-pub">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title">Registrar Publicação</div>
+      <button class="modal-close" onclick="document.getElementById('modal-pub').classList.remove('open')">✕</button>
+    </div>
+    <form id="form-pub">
+      <div class="form-row cols2">
+        <div><label>Data da Publicação</label><input type="date" name="data_pub" required></div>
+        <div><label>Fonte / Diário</label>
+          <select name="fonte">
+            <option>DJ Minas Gerais</option><option>DJe Pitangui</option>
+            <option>DJe Divinópolis</option><option>DOU</option><option>Outro</option>
+          </select>
+        </div>
+      </div>
+      <div class="form-group">
+        <label>Processo</label>
+        <select name="processo_id">
+          <option value="">— Sem processo vinculado —</option>
+          {% for proc in processos %}<option value="{{ proc.id }}">{{ proc.numero }}</option>{% endfor %}
+        </select>
+      </div>
+      <div class="form-row cols2">
+        <div><label>Tipo de Publicação</label>
+          <select name="tipo">
+            <option>Intimação</option><option>Citação</option><option>Despacho</option>
+            <option>Sentença</option><option>Acórdão</option>
+            <option>Decisão Interlocutória</option><option>Edital</option>
+          </select>
+        </div>
+        <div><label>Prazo Legal (dias corridos)</label><input type="number" name="dias_prazo" value="15" min="1"></div>
+      </div>
+      <div class="form-group">
+        <label>Conteúdo da Publicação</label>
+        <textarea name="conteudo" rows="5" placeholder="Cole aqui o texto da publicação. O sistema detecta automaticamente se tem efeito intimatório..."></textarea>
+      </div>
+      <div id="pub-resultado" style="display:none;padding:.75rem;border-radius:6px;margin-bottom:.75rem;font-size:13px"></div>
+      <div style="display:flex;gap:8px;justify-content:flex-end">
+        <button type="button" class="btn btn-outline" onclick="document.getElementById('modal-pub').classList.remove('open')">Cancelar</button>
+        <button type="submit" class="btn btn-gold">Salvar Publicação</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+{% endblock %}
+{% block scripts %}
+<script>
+const hoje = new Date().toISOString().split('T')[0];
+document.getElementById('pje-ini').value = hoje;
+document.getElementById('pje-fim').value = hoje;
+document.querySelector('#form-pub input[type=date]').value = hoje;
+
+// ── Filtros ────────────────────────────────────────────────────
+function filtrar(modo) {
+  ['todas','pendente','tratada','descartada','sem-efeito'].forEach(m =>
+    document.getElementById('f-'+m).style.borderColor = ''
+  );
+  document.getElementById('f-'+modo).style.borderColor = 'var(--gold)';
+
+  document.querySelectorAll('#tabela-pubs tbody tr[data-status]').forEach(tr => {
+    const s = tr.dataset.status;
+    const e = tr.dataset.efeito;
+    if (modo === 'todas')        tr.style.display = '';
+    else if (modo === 'sem-efeito') tr.style.display = e === 'nao' ? '' : 'none';
+    else                         tr.style.display = s === modo ? '' : 'none';
+  });
+}
+
+// ── Tratar ─────────────────────────────────────────────────────
+async function tratar(id, btn) {
+  btn.disabled = true;
+  const r = await fetch(`/publicacoes/${id}/tratar`, {method: 'POST'});
+  if ((await r.json()).ok) {
+    const row = document.getElementById('pub-row-' + id);
+    // Atualiza pill de status na linha sem reload
+    row.querySelector('[data-status]') && (row.dataset.status = 'tratada');
+    row.querySelectorAll('button').forEach(b => b.remove());
+    const cell = row.cells[row.cells.length - 2]; // coluna Status
+    cell.innerHTML = '<span class="pill pill-green" style="font-size:10px">Tratada</span>';
+  } else {
+    btn.disabled = false;
+  }
+}
+
+// ── Descartar ──────────────────────────────────────────────────
+async function descartar(id, btn) {
+  if (!confirm('Descartar esta publicação? A tarefa vinculada será marcada como concluída.')) return;
+  btn.disabled = true;
+  const r = await fetch(`/publicacoes/${id}/descartar`, {method: 'POST'});
+  if ((await r.json()).ok) {
+    const row = document.getElementById('pub-row-' + id);
+    row.dataset.status = 'descartada';
+    row.querySelectorAll('button').forEach(b => b.remove());
+    const cell = row.cells[row.cells.length - 2];
+    cell.innerHTML = '<span class="pill pill-gray" style="font-size:10px">Descartada</span>';
+    row.style.opacity = '.55';
+  } else {
+    btn.disabled = false;
+  }
+}
+
+// ── Importar PJe ───────────────────────────────────────────────
+document.getElementById('form-pje').addEventListener('submit', async function(e) {
+  e.preventDefault();
+  const btn  = document.getElementById('pje-btn');
+  const spin = document.getElementById('pje-spin');
+  const res  = document.getElementById('pje-resultado');
+  btn.disabled = true; spin.style.display = 'inline'; res.style.display = 'none';
+  const fd = new FormData(this);
+  try {
+    const r = await fetch('/publicacoes/importar-pje', {method: 'POST', body: fd});
+    const d = await r.json();
+    res.style.display = 'block';
+    if (d.ok) {
+      res.style.cssText = 'display:block;background:var(--green-bg);border:1px solid var(--green);color:var(--green-t);padding:.75rem;border-radius:6px';
+      res.innerHTML = `<strong>✓ Importação concluída!</strong><br>
+        Novas: <strong>${d.importadas}</strong> &nbsp;|&nbsp; Já existentes: ${d.duplicadas} &nbsp;|&nbsp; Erros: ${d.erros}`;
+      if (d.importadas > 0) setTimeout(() => location.reload(), 2200);
+    } else {
+      res.style.cssText = 'display:block;background:#fff0f0;border:1px solid #e55;color:#c00;padding:.75rem;border-radius:6px';
+      res.textContent = 'Erro: ' + d.erro;
+    }
+  } catch(err) {
+    res.style.display = 'block'; res.textContent = 'Falha na conexão: ' + err;
+  }
+  btn.disabled = false; spin.style.display = 'none';
+});
+
+// ── Publicação manual ──────────────────────────────────────────
+document.getElementById('form-pub').addEventListener('submit', async function(e) {
+  e.preventDefault();
+  const fd  = new FormData(this);
+  const r   = await fetch('/publicacoes/nova', {method: 'POST', body: fd});
+  const d   = await r.json();
+  const res = document.getElementById('pub-resultado');
+  if (d.ok) {
+    res.style.cssText = 'display:block;background:var(--green-bg);border:1px solid var(--green);color:var(--green-t);padding:.75rem;border-radius:6px';
+    if (d.tem_efeito) {
+      res.innerHTML = `Publicação salva! Prazo lançado para <strong>${d.prazo_venc}</strong> e tarefa de análise criada.`;
+    } else {
+      res.innerHTML = `Publicação salva como <strong>Só ciência</strong> — sem efeito intimatório detectado. Nenhum prazo gerado.`;
+    }
+    setTimeout(() => location.reload(), 2200);
+  }
+});
+</script>
+{% endblock %}

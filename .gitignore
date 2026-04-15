@@ -1,0 +1,46 @@
+# Ambiente virtual Python
+venv/
+env/
+.env
+.venv/
+
+# Banco de dados SQLite
+*.db
+*.sqlite
+*.sqlite3
+banco/
+instance/
+
+# Uploads de arquivos
+uploads/
+
+# Cache Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+.Python
+
+# Arquivos de sistema
+.DS_Store
+Thumbs.db
+
+# Configurações de IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Logs
+*.log
+logs/
+
+# Arquivos temporários
+*.tmp
+*.bak
+
+# Pasta de configurações do Claude (interno)
+.claude/
+
+# Pasta gerada com erro de nome
+{templates,static

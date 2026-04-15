@@ -1,0 +1,212 @@
+{% extends 'base.html' %}
+{% block title %}{{ p.numero }} · CRM Castanheira{% endblock %}
+{% block page_title %}{{ p.tipo }}{% endblock %}
+{% block page_sub %}{{ p.numero }} · {{ p.vara }} · {{ p.comarca }}{% endblock %}
+{% block content %}
+
+{# ── Modal: Novo Andamento ── #}
+<div class="modal-backdrop" id="modal-andamento">
+  <div class="modal">
+    <div class="modal-header">
+      <span class="modal-title">Novo Andamento</span>
+      <button class="modal-close" onclick="document.getElementById('modal-andamento').classList.remove('open')">✕</button>
+    </div>
+    <form method="POST" action="/processos/{{ p.id }}/andamentos">
+      <div class="form-row cols2">
+        <div>
+          <label>Data</label>
+          <input type="date" name="data" value="{{ today }}" required>
+        </div>
+      </div>
+      <div class="form-group">
+        <label>Descrição</label>
+        <textarea name="descricao" rows="4" required placeholder="Descreva o andamento processual…"></textarea>
+      </div>
+      <div style="display:flex;gap:.5rem;justify-content:flex-end">
+        <button type="button" class="btn btn-outline" onclick="document.getElementById('modal-andamento').classList.remove('open')">Cancelar</button>
+        <button type="submit" class="btn btn-gold">Salvar</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<div class="grid2">
+  <div>
+    <div class="card" style="margin-bottom:.85rem">
+      <div class="card-header"><span class="card-title">Dados do Processo</span><span class="pill pill-{% if p.status=='Ativo' %}blue{% else %}gray{% endif %}">{{ p.status }}</span></div>
+      <div class="card-body">
+        <table style="font-size:12.5px">
+          <tr><td style="color:var(--text3);padding:5px 0;width:120px">Número</td><td style="font-family:monospace">{{ p.numero }}</td></tr>
+          <tr><td style="color:var(--text3);padding:5px 0">Tipo</td><td>{{ p.tipo }}</td></tr>
+          <tr><td style="color:var(--text3);padding:5px 0">Polo</td><td>{{ p.polo }}</td></tr>
+          <tr><td style="color:var(--text3);padding:5px 0">Vara</td><td>{{ p.vara }}</td></tr>
+          <tr><td style="color:var(--text3);padding:5px 0">Comarca</td><td>{{ p.comarca }}</td></tr>
+          <tr><td style="color:var(--text3);padding:5px 0">Cliente</td><td><strong>{{ p.cliente.nome if p.cliente else '—' }}</strong></td></tr>
+          {% if p.obs %}<tr><td style="color:var(--text3);padding:5px 0">Obs.</td><td>{{ p.obs }}</td></tr>{% endif %}
+        </table>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-header"><span class="card-title">Prazos</span><a href="/prazos/novo" class="btn btn-gold btn-sm">+ Prazo</a></div>
+      {% for pr in p.prazos %}
+      <div class="tl-item" style="padding:.6rem 1rem">
+        <div class="tl-dot {% if pr.urgencia in ['urgente','vencido'] %}dot-red{% elif pr.urgencia=='atencao' %}dot-amber{% else %}dot-green{% endif %}"></div>
+        <div class="tl-info"><div class="tl-title">{{ pr.tipo }}</div><div class="tl-sub">{{ pr.data_venc.strftime('%d/%m/%Y') }} · {{ pr.status }}</div></div>
+      </div>
+      {% else %}<div class="empty"><div class="empty-text">Nenhum prazo lançado.</div></div>{% endfor %}
+    </div>
+  </div>
+  <div>
+    <div class="card" style="margin-bottom:.85rem">
+      <div class="card-header"><span class="card-title">Publicações</span></div>
+      {% for pub in p.publicacoes %}
+      <div class="tl-item" style="padding:.6rem 1rem">
+        <div class="tl-dot dot-blue"></div>
+        <div class="tl-info"><div class="tl-title">{{ pub.tipo }} · {{ pub.fonte }}</div><div class="tl-sub">{{ pub.data_pub.strftime('%d/%m/%Y') }}</div></div>
+      </div>
+      {% else %}<div class="empty"><div class="empty-text">Nenhuma publicação registrada.</div></div>{% endfor %}
+    </div>
+    <div class="card">
+      <div class="card-header"><span class="card-title">Tarefas</span><a href="/tarefas" class="btn btn-gold btn-sm">+ Tarefa</a></div>
+      {% for t in p.tarefas %}
+      <div class="tl-item" style="padding:.6rem 1rem">
+        <div class="tl-dot {% if t.status=='concluida' %}dot-green{% elif t.prioridade=='urgente' %}dot-red{% else %}dot-amber{% endif %}"></div>
+        <div class="tl-info"><div class="tl-title">{{ t.titulo }}</div><div class="tl-sub">{{ t.status }} · {{ t.criado_em.strftime('%d/%m/%Y') }}</div></div>
+      </div>
+      {% else %}<div class="empty"><div class="empty-text">Nenhuma tarefa vinculada.</div></div>{% endfor %}
+    </div>
+  </div>
+</div>
+
+{# ── Seção Andamentos ── #}
+<div id="andamentos" style="margin-top:.85rem">
+  <div class="card">
+    <div class="card-header">
+      <span class="card-title">Andamentos
+        {% set n_imp = p.andamentos | selectattr('importante') | list | length %}
+        {% if n_imp > 0 %}
+          <span class="pill pill-amber" style="margin-left:.5rem">{{ n_imp }} importante{{ 's' if n_imp > 1 }}</span>
+        {% endif %}
+      </span>
+      <button class="btn btn-gold btn-sm" onclick="document.getElementById('modal-andamento').classList.add('open')">+ Andamento</button>
+    </div>
+    {% for and_ in p.andamentos %}
+    <div class="tl-item" style="padding:.65rem 1rem;align-items:flex-start">
+      <div class="tl-dot {% if and_.importante %}dot-amber{% else %}dot-blue{% endif %}" style="margin-top:5px"></div>
+      <div class="tl-info" style="flex:1">
+        <div style="display:flex;align-items:center;gap:.5rem;flex-wrap:wrap">
+          <span class="tl-title">{{ and_.descricao }}</span>
+          {% if and_.importante %}
+            <span class="pill pill-amber" style="font-size:9px">importante</span>
+          {% endif %}
+        </div>
+        <div class="tl-sub" style="margin-top:2px">
+          {{ and_.data.strftime('%d/%m/%Y') }}
+          {% if and_.origem == 'pje' %} · <span style="color:var(--blue)">PJe</span>{% endif %}
+        </div>
+      </div>
+      <div style="display:flex;gap:.35rem;flex-shrink:0;margin-left:.5rem">
+        <form method="POST" action="/andamentos/{{ and_.id }}/importante" style="display:inline">
+          <button type="submit" class="btn btn-outline btn-sm" title="{% if and_.importante %}Desmarcar importante{% else %}Marcar como importante{% endif %}">
+            {% if and_.importante %}★{% else %}☆{% endif %}
+          </button>
+        </form>
+        <form method="POST" action="/andamentos/{{ and_.id }}/excluir" style="display:inline"
+              onsubmit="return confirm('Excluir este andamento?')">
+          <button type="submit" class="btn btn-red btn-sm">✕</button>
+        </form>
+      </div>
+    </div>
+    {% else %}
+    <div class="empty"><div class="empty-text">Nenhum andamento registrado.</div></div>
+    {% endfor %}
+  </div>
+</div>
+
+{# ── Modal: Upload de Documento ── #}
+<div class="modal-backdrop" id="modal-doc">
+  <div class="modal">
+    <div class="modal-header">
+      <span class="modal-title">Anexar Documento</span>
+      <button class="modal-close" onclick="document.getElementById('modal-doc').classList.remove('open')">✕</button>
+    </div>
+    <form method="POST" action="/processos/{{ p.id }}/documentos" enctype="multipart/form-data">
+      <div class="form-group">
+        <label>Arquivo</label>
+        <input type="file" name="arquivo" required
+               accept=".pdf,.doc,.docx,.xls,.xlsx,.jpg,.jpeg,.png,.txt,.odt,.ods">
+        <div style="font-size:10px;color:var(--text3);margin-top:3px">PDF, Word, Excel, imagens — até 32 MB</div>
+      </div>
+      <div class="form-row cols2">
+        <div>
+          <label>Tipo</label>
+          <select name="tipo">
+            <option value="peticao">Petição</option>
+            <option value="recurso">Recurso</option>
+            <option value="decisao">Decisão / Despacho</option>
+            <option value="sentenca">Sentença / Acórdão</option>
+            <option value="contrato">Contrato</option>
+            <option value="procuracao">Procuração</option>
+            <option value="certidao">Certidão</option>
+            <option value="outro" selected>Outro</option>
+          </select>
+        </div>
+        <div>
+          <label>Responsável</label>
+          <select name="responsavel">
+            <option value="Jardel">Jardel</option>
+            <option value="Steffany">Steffany</option>
+          </select>
+        </div>
+      </div>
+      <div class="form-group">
+        <label>Descrição (opcional)</label>
+        <input type="text" name="descricao" placeholder="Ex: Contestação protocolada em 14/04/2026">
+      </div>
+      <div style="display:flex;gap:.5rem;justify-content:flex-end">
+        <button type="button" class="btn btn-outline" onclick="document.getElementById('modal-doc').classList.remove('open')">Cancelar</button>
+        <button type="submit" class="btn btn-gold">Anexar</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+{# ── Seção Documentos ── #}
+<div id="documentos" style="margin-top:.85rem">
+  <div class="card">
+    <div class="card-header">
+      <span class="card-title">Documentos
+        {% if p.documentos %}
+          <span class="pill pill-gray" style="margin-left:.5rem">{{ p.documentos|length }}</span>
+        {% endif %}
+      </span>
+      <button class="btn btn-gold btn-sm" onclick="document.getElementById('modal-doc').classList.add('open')">+ Anexar</button>
+    </div>
+    {% for doc in p.documentos|sort(attribute='criado_em', reverse=True) %}
+    <div class="tl-item" style="padding:.65rem 1rem;align-items:center">
+      <div style="font-size:20px;flex-shrink:0;margin-right:2px">{{ doc.icone }}</div>
+      <div class="tl-info" style="flex:1;min-width:0">
+        <div style="display:flex;align-items:center;gap:.5rem;flex-wrap:wrap">
+          <span class="tl-title" style="word-break:break-all">{{ doc.nome_arquivo }}</span>
+          <span class="pill pill-gray" style="font-size:9px">{{ doc.tipo }}</span>
+        </div>
+        <div class="tl-sub">
+          {{ doc.criado_em.strftime('%d/%m/%Y') }} · {{ doc.responsavel }}
+          {% if doc.descricao %} · {{ doc.descricao }}{% endif %}
+        </div>
+      </div>
+      <div style="display:flex;gap:.35rem;flex-shrink:0;margin-left:.5rem">
+        <a href="/documentos/{{ doc.id }}/download" class="btn btn-outline btn-sm" title="Baixar">⬇</a>
+        <form method="POST" action="/documentos/{{ doc.id }}/excluir" style="display:inline"
+              onsubmit="return confirm('Excluir este documento?')">
+          <button type="submit" class="btn btn-red btn-sm">✕</button>
+        </form>
+      </div>
+    </div>
+    {% else %}
+    <div class="empty"><div class="empty-text">Nenhum documento anexado.</div></div>
+    {% endfor %}
+  </div>
+</div>
+
+{% endblock %}

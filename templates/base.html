@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>{% block title %}CRM Castanheira{% endblock %}</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=DM+Serif+Display&display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --gold:#b8960c;--gold-l:#f5c842;--gold-bg:#faf7ed;
+  --dark:#1a1a2e;--dark2:#16213e;
+  --surface:#fff;--surface2:#f8f9fc;--surface3:#f1f3f8;
+  --text:#1a1a2e;--text2:#4a5568;--text3:#718096;
+  --border:#e2e8f0;--border2:#cbd5e0;
+  --green:#2d9a6a;--green-bg:#e8f8f1;--green-t:#1a5c3f;
+  --red:#c53030;--red-bg:#fff5f5;--red-t:#822020;
+  --amber:#b7791f;--amber-bg:#fffbeb;--amber-t:#7a5010;
+  --blue:#2b6cb0;--blue-bg:#ebf8ff;--blue-t:#1a4070;
+  --r:10px;--rl:14px;
+}
+body{font-family:'DM Sans',sans-serif;background:var(--surface2);color:var(--text);min-height:100vh;display:flex}
+.sidebar{width:220px;background:var(--dark2);min-height:100vh;flex-shrink:0;display:flex;flex-direction:column}
+.sidebar-logo{padding:1.1rem 1rem 1rem;border-bottom:1px solid rgba(255,255,255,.06);display:flex;align-items:center;gap:10px}
+.logo-mark{width:34px;height:34px;background:var(--gold);border-radius:9px;display:flex;align-items:center;justify-content:center;font-family:'DM Serif Display',serif;font-size:17px;color:var(--dark);font-weight:700;flex-shrink:0}
+.logo-text{font-family:'DM Serif Display',serif;font-size:16px;color:var(--gold-l);line-height:1.1}
+.logo-sub{font-size:9px;color:rgba(255,255,255,.35);text-transform:uppercase;letter-spacing:.07em}
+.nav{padding:.75rem 0;flex:1}
+.nav-group{margin-bottom:.25rem}
+.nav-label{font-size:9px;font-weight:700;color:rgba(255,255,255,.25);text-transform:uppercase;letter-spacing:.12em;padding:.7rem 1rem .25rem}
+.nav-link{display:flex;align-items:center;gap:9px;padding:7px 14px;color:rgba(255,255,255,.5);font-size:12.5px;text-decoration:none;border-left:2.5px solid transparent;transition:all .13s;margin:1px 0}
+.nav-link:hover{background:rgba(255,255,255,.05);color:rgba(255,255,255,.85)}
+.nav-link.active{background:rgba(184,150,12,.13);color:var(--gold-l);border-left-color:var(--gold)}
+.nav-link svg{width:15px;height:15px;flex-shrink:0;opacity:.7}
+.nav-badge{margin-left:auto;background:#c53030;color:#fff;font-size:10px;font-weight:700;padding:1px 6px;border-radius:9px;min-width:18px;text-align:center}
+.nav-badge.warn{background:var(--amber)}
+.sidebar-footer{padding:.75rem 1rem;border-top:1px solid rgba(255,255,255,.06);font-size:10px;color:rgba(255,255,255,.25)}
+.main{flex:1;min-width:0}
+.topbar{background:var(--surface);border-bottom:1px solid var(--border);padding:.7rem 1.5rem;display:flex;align-items:center;justify-content:space-between}
+.topbar-title{font-family:'DM Serif Display',serif;font-size:20px;color:var(--dark)}
+.topbar-sub{font-size:11px;color:var(--text3)}
+.topbar-right{display:flex;gap:.75rem;align-items:center}
+.btn{display:inline-flex;align-items:center;gap:6px;padding:7px 14px;border-radius:8px;font-size:12.5px;font-weight:500;cursor:pointer;border:none;font-family:'DM Sans',sans-serif;text-decoration:none;transition:all .13s}
+.btn-gold{background:var(--gold);color:var(--dark)}
+.btn-gold:hover{background:var(--gold-l)}
+.btn-outline{background:transparent;border:1px solid var(--border2);color:var(--text2)}
+.btn-outline:hover{border-color:var(--gold);color:var(--gold)}
+.btn-green{background:var(--green-bg);color:var(--green-t);border:1px solid var(--green)}
+.btn-red{background:var(--red-bg);color:var(--red-t);border:1px solid #fecaca}
+.btn-sm{padding:4px 10px;font-size:11px}
+.content{padding:1.25rem 1.5rem}
+.card{background:var(--surface);border-radius:var(--rl);border:1px solid var(--border);overflow:hidden}
+.card-header{padding:.85rem 1.1rem;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between}
+.card-title{font-size:13.5px;font-weight:600;color:var(--dark)}
+.card-body{padding:1.1rem}
+.metrics{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:.85rem;margin-bottom:1.1rem}
+.metric{background:var(--surface);border-radius:var(--rl);border:1px solid var(--border);padding:.9rem 1rem}
+.metric-label{font-size:10px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.07em;margin-bottom:.4rem}
+.metric-value{font-size:26px;font-weight:300;font-family:'DM Serif Display',serif;color:var(--dark);line-height:1}
+.metric-sub{font-size:11px;color:var(--text3);margin-top:.3rem}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:.85rem;margin-bottom:.85rem}
+.grid3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:.85rem;margin-bottom:.85rem}
+table{width:100%;border-collapse:collapse;font-size:12.5px}
+th{text-align:left;padding:7px 10px;font-size:10px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.05em;border-bottom:1px solid var(--border);background:var(--surface2)}
+td{padding:9px 10px;border-bottom:1px solid var(--border);vertical-align:middle}
+tr:last-child td{border-bottom:none}
+tr:hover td{background:var(--gold-bg)}
+.pill{display:inline-flex;align-items:center;font-size:10px;font-weight:700;padding:2px 8px;border-radius:20px}
+.pill-red{background:var(--red-bg);color:var(--red-t)}
+.pill-amber{background:var(--amber-bg);color:var(--amber-t)}
+.pill-blue{background:var(--blue-bg);color:var(--blue-t)}
+.pill-green{background:var(--green-bg);color:var(--green-t)}
+.pill-gray{background:var(--surface3);color:var(--text3)}
+.pill-gold{background:var(--gold-bg);color:#7a5a00}
+.urgencia-dot{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:5px}
+.dot-red{background:var(--red)}
+.dot-amber{background:var(--amber)}
+.dot-green{background:var(--green)}
+.dot-blue{background:var(--blue)}
+label{font-size:11px;font-weight:600;color:var(--text2);display:block;margin-bottom:3px;letter-spacing:.02em}
+input[type=text],input[type=email],input[type=date],input[type=number],select,textarea{width:100%;padding:7px 10px;border:1px solid var(--border2);border-radius:8px;font-size:12.5px;font-family:'DM Sans',sans-serif;color:var(--text);background:var(--surface);outline:none;transition:border .13s}
+input:focus,select:focus,textarea:focus{border-color:var(--gold)}
+textarea{resize:vertical;min-height:80px}
+.form-row{display:grid;gap:.65rem;margin-bottom:.65rem}
+.form-row.cols2{grid-template-columns:1fr 1fr}
+.form-row.cols3{grid-template-columns:1fr 1fr 1fr}
+.form-group{margin-bottom:.65rem}
+.alert{padding:.75rem 1rem;border-radius:8px;font-size:12.5px;margin-bottom:.85rem}
+.alert-red{background:var(--red-bg);border:1px solid #fecaca;color:var(--red-t)}
+.alert-amber{background:var(--amber-bg);border:1px solid #fbd38d;color:var(--amber-t)}
+.ia-box{background:var(--dark);border-radius:10px;padding:.85rem 1rem;margin-top:.75rem}
+.ia-label{font-size:9px;font-weight:700;color:var(--gold-l);text-transform:uppercase;letter-spacing:.09em;margin-bottom:.4rem}
+.ia-text{font-size:12px;color:rgba(255,255,255,.82);line-height:1.6}
+.tl-item{display:flex;gap:10px;padding:.6rem 0;border-bottom:1px solid var(--border)}
+.tl-item:last-child{border-bottom:none}
+.tl-dot{width:9px;height:9px;border-radius:50%;flex-shrink:0;margin-top:4px}
+.tl-info{flex:1;min-width:0}
+.tl-title{font-size:12.5px;font-weight:500;color:var(--text)}
+.tl-sub{font-size:11px;color:var(--text3)}
+.tl-date{font-size:10px;color:var(--text3);white-space:nowrap}
+.modal-backdrop{display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:50;align-items:center;justify-content:center}
+.modal-backdrop.open{display:flex}
+.modal{background:var(--surface);border-radius:var(--rl);padding:1.25rem;width:500px;max-width:96vw;max-height:90vh;overflow-y:auto}
+.modal-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem}
+.modal-title{font-family:'DM Serif Display',serif;font-size:18px;color:var(--dark)}
+.modal-close{background:none;border:none;font-size:18px;cursor:pointer;color:var(--text3)}
+.search-bar{position:relative;margin-bottom:.85rem}
+.search-bar input{padding-left:30px}
+.search-icon{position:absolute;left:9px;top:50%;transform:translateY(-50%);color:var(--text3);font-size:13px}
+.empty{text-align:center;padding:2.5rem;color:var(--text3)}
+.empty-icon{font-size:36px;margin-bottom:.5rem}
+.empty-text{font-size:13px}
+@media(max-width:800px){
+  .sidebar{width:52px}
+  .sidebar .nav-label,.sidebar .logo-text,.sidebar .logo-sub,.sidebar .nav-link span,.sidebar .nav-badge,.sidebar-footer{display:none}
+  .grid2,.grid3{grid-template-columns:1fr}
+  .form-row.cols2,.form-row.cols3{grid-template-columns:1fr}
+}
+</style>
+</head>
+<body>
+
+<nav class="sidebar">
+  <div class="sidebar-logo">
+    <div class="logo-mark">C</div>
+    <div>
+      <div class="logo-text">Castanheira</div>
+      <div class="logo-sub">CRM Jurídico</div>
+    </div>
+  </div>
+  <div class="nav">
+    <div class="nav-group">
+      <div class="nav-label">Principal</div>
+      <a href="/" class="nav-link {% if request.path=='/' %}active{% endif %}">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
+        <span>Dashboard</span>
+      </a>
+      <a href="/tarefas" class="nav-link {% if '/tarefas' in request.path %}active{% endif %}">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/></svg>
+        <span>Tarefas</span>
+        <span class="nav-badge" id="nb-tarefas">0</span>
+      </a>
+      <a href="/prazos" class="nav-link {% if '/prazos' in request.path %}active{% endif %}">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+        <span>Prazos</span>
+        <span class="nav-badge warn" id="nb-prazos">0</span>
+      </a>
+      <a href="/publicacoes" class="nav-link {% if '/publicacoes' in request.path %}active{% endif %}">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+        <span>Publicações</span>
+      </a>
+      <a href="/financeiro" class="nav-link {% if '/financeiro' in request.path %}active{% endif %}">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/></svg>
+        <span>Financeiro</span>
+      </a>
+    </div>
+    <div class="nav-group">
+      <div class="nav-label">Cadastros</div>
+      <a href="/processos" class="nav-link {% if '/processos' in request.path %}active{% endif %}">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 19a2 2 0 01-2 2H4a2 2 0 01-2-2V5a2 2 0 012-2h5l2 3h9a2 2 0 012 2z"/></svg>
+        <span>Processos</span>
+      </a>
+      <a href="/clientes" class="nav-link {% if '/clientes' in request.path %}active{% endif %}">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>
+        <span>Clientes</span>
+      </a>
+    </div>
+  </div>
+  <div class="sidebar-footer" style="display:flex;flex-direction:column;gap:4px">
+    <span style="color:rgba(255,255,255,.55);font-size:11px">{{ usuario_atual }}</span>
+    <a href="/logout" style="color:rgba(255,255,255,.25);font-size:10px;text-decoration:none">Sair →</a>
+  </div>
+</nav>
+
+<div class="main">
+  <div class="topbar">
+    <div>
+      <div class="topbar-title">{% block page_title %}{% endblock %}</div>
+      <div class="topbar-sub">{% block page_sub %}Castanheira e Reis Advogados Associados · Papagaios/MG{% endblock %}</div>
+    </div>
+    <div class="topbar-right">{% block topbar_actions %}{% endblock %}</div>
+  </div>
+  <div class="content">
+    {% block content %}{% endblock %}
+  </div>
+</div>
+
+<script>
+async function carregarBadges(){
+  try{
+    const r = await fetch('/api/resumo');
+    const d = await r.json();
+    const nt = document.getElementById('nb-tarefas');
+    const np = document.getElementById('nb-prazos');
+    if(nt) nt.textContent = d.tarefas_abertas;
+    if(np){ np.textContent = d.prazos_urgentes; np.style.display = d.prazos_urgentes>0?'':'none'; }
+  }catch(e){}
+}
+carregarBadges();
+</script>
+{% block scripts %}{% endblock %}
+</body>
+</html>

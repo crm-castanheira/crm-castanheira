@@ -1,0 +1,34 @@
+{% extends 'base.html' %}
+{% block title %}Processos · CRM Castanheira{% endblock %}
+{% block page_title %}Processos{% endblock %}
+{% block topbar_actions %}<a href="/processos/novo" class="btn btn-gold">+ Novo Processo</a>{% endblock %}
+{% block content %}
+<div class="search-bar"><span class="search-icon">🔍</span>
+  <form method="get"><input type="text" name="q" value="{{ q }}" placeholder="Buscar por número ou tipo..."></form>
+</div>
+<div class="card">
+  <div class="card-header"><span class="card-title">Todos os Processos</span>
+    <div style="display:flex;gap:6px">
+      <a href="/processos?status=Ativo" class="btn btn-outline btn-sm">Ativos</a>
+      <a href="/processos" class="btn btn-outline btn-sm">Todos</a>
+    </div>
+  </div>
+  <table>
+    <thead><tr><th>Nº Processo</th><th>Cliente</th><th>Tipo</th><th>Vara</th><th>Status</th><th></th></tr></thead>
+    <tbody>
+    {% for p in processos %}
+    <tr>
+      <td style="font-family:monospace;font-size:11px;color:var(--blue)">{{ p.numero }}</td>
+      <td><strong>{{ p.cliente.nome if p.cliente else '—' }}</strong></td>
+      <td>{{ p.tipo }}</td>
+      <td>{{ p.vara }} · {{ p.comarca }}</td>
+      <td><span class="pill {% if p.status=='Ativo' %}pill-blue{% elif p.status=='Encerrado' %}pill-green{% else %}pill-gray{% endif %}">{{ p.status }}</span></td>
+      <td><a href="/processos/{{ p.id }}" class="btn btn-outline btn-sm">Ver</a></td>
+    </tr>
+    {% else %}
+    <tr><td colspan="6" style="text-align:center;padding:1.5rem;color:var(--text3)">Nenhum processo encontrado.</td></tr>
+    {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}

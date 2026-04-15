@@ -1,0 +1,24 @@
+{% extends 'base.html' %}
+{% block title %}Novo Cliente · CRM Castanheira{% endblock %}
+{% block page_title %}Novo Cliente{% endblock %}
+{% block content %}
+<div class="card" style="max-width:600px">
+  <div class="card-header"><span class="card-title">Dados do Cliente</span></div>
+  <div class="card-body">
+    <form method="post">
+      <div class="form-group"><label>Nome Completo *</label><input type="text" name="nome" required placeholder="Nome completo do cliente"></div>
+      <div class="form-row cols2">
+        <div><label>CPF</label><input type="text" name="cpf" placeholder="000.000.000-00"></div>
+        <div><label>Telefone</label><input type="text" name="telefone" placeholder="(37) 9 0000-0000"></div>
+      </div>
+      <div class="form-group"><label>E-mail</label><input type="email" name="email" placeholder="email@exemplo.com"></div>
+      <div class="form-group"><label>Endereço</label><input type="text" name="endereco" placeholder="Rua, número, bairro, cidade/UF"></div>
+      <div class="form-group"><label>Observações</label><textarea name="obs" placeholder="Informações relevantes sobre o cliente..."></textarea></div>
+      <div style="display:flex;gap:8px;justify-content:flex-end">
+        <a href="/clientes" class="btn btn-outline">Cancelar</a>
+        <button type="submit" class="btn btn-gold">Cadastrar</button>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Entrar · CRM Castanheira</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=DM+Serif+Display&display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{--gold:#b8960c;--gold-l:#f5c842;--dark:#1a1a2e;--dark2:#16213e;--border:#e2e8f0;--border2:#cbd5e0;--text:#1a1a2e;--text2:#4a5568;--text3:#718096;--red:#c53030;--red-bg:#fff5f5;--red-t:#822020}
+body{font-family:'DM Sans',sans-serif;background:#f8f9fc;min-height:100vh;display:flex;align-items:center;justify-content:center}
+.card{background:#fff;border-radius:16px;border:1px solid var(--border);padding:2.5rem 2rem;width:380px;max-width:96vw}
+.logo{display:flex;align-items:center;gap:12px;margin-bottom:2rem;justify-content:center}
+.logo-mark{width:44px;height:44px;background:var(--gold);border-radius:12px;display:flex;align-items:center;justify-content:center;font-family:'DM Serif Display',serif;font-size:22px;color:var(--dark);font-weight:700}
+.logo-text{font-family:'DM Serif Display',serif;font-size:20px;color:var(--dark);line-height:1.1}
+.logo-sub{font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.08em}
+label{font-size:11px;font-weight:600;color:var(--text2);display:block;margin-bottom:3px;letter-spacing:.02em}
+input{width:100%;padding:9px 12px;border:1px solid var(--border2);border-radius:8px;font-size:13px;font-family:'DM Sans',sans-serif;color:var(--text);margin-bottom:.85rem;outline:none;transition:border .13s}
+input:focus{border-color:var(--gold)}
+button{width:100%;padding:10px;background:var(--gold);color:var(--dark);border:none;border-radius:8px;font-size:13.5px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif;transition:background .13s}
+button:hover{background:var(--gold-l)}
+.alert{background:var(--red-bg);border:1px solid #fecaca;color:var(--red-t);padding:.65rem .85rem;border-radius:8px;font-size:12.5px;margin-bottom:.85rem}
+</style>
+</head>
+<body>
+<div class="card">
+  <div class="logo">
+    <div class="logo-mark">C</div>
+    <div>
+      <div class="logo-text">Castanheira</div>
+      <div class="logo-sub">CRM Jurídico</div>
+    </div>
+  </div>
+  {% if erro %}
+  <div class="alert">{{ erro }}</div>
+  {% endif %}
+  <form method="POST">
+    <div>
+      <label>Usuário</label>
+      <input type="text" name="usuario" autofocus autocomplete="username" placeholder="jardel ou steffany">
+    </div>
+    <div>
+      <label>Senha</label>
+      <input type="password" name="senha" autocomplete="current-password" placeholder="••••••••">
+    </div>
+    <button type="submit">Entrar</button>
+  </form>
+</div>
+</body>
+</html>

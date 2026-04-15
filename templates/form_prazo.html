@@ -1,0 +1,54 @@
+{% extends 'base.html' %}
+{% block title %}Novo Prazo · CRM Castanheira{% endblock %}
+{% block page_title %}Lançar Prazo Processual{% endblock %}
+{% block content %}
+<div class="card" style="max-width:600px">
+  <div class="card-header"><span class="card-title">Dados do Prazo</span></div>
+  <div class="card-body">
+    <form method="post">
+      <div class="form-group"><label>Processo</label>
+        <select name="processo_id">
+          <option value="">— Sem processo vinculado —</option>
+          {% for p in processos %}<option value="{{ p.id }}">{{ p.numero }} — {{ p.tipo }}</option>{% endfor %}
+        </select>
+      </div>
+      <div class="form-row cols2">
+        <div><label>Tipo de Prazo</label>
+          <select name="tipo"><option>Contestação</option><option>Recurso</option><option>Apelação</option><option>Agravo</option><option>Memorial</option><option>Réplica</option><option>Embargos</option><option>Impugnação</option><option>Outro</option></select>
+        </div>
+        <div><label>Contagem</label>
+          <select name="contagem"><option>Corridos</option><option>Úteis</option></select>
+        </div>
+      </div>
+      <div class="form-row cols3">
+        <div><label>Data de Início</label><input type="date" name="data_inicio" id="dt-inicio"></div>
+        <div><label>Nº de Dias</label><input type="number" name="dias" id="dt-dias" value="15" min="1"></div>
+        <div><label>Vencimento</label><input type="date" name="data_venc" id="dt-venc" required></div>
+      </div>
+      <div class="form-group"><label>Descrição / Observações</label><textarea name="descricao" placeholder="Peça a ser elaborada, documentos necessários, estratégia..."></textarea></div>
+      <div style="display:flex;gap:8px;justify-content:flex-end">
+        <a href="/prazos" class="btn btn-outline">Cancelar</a>
+        <button type="submit" class="btn btn-gold">Salvar Prazo</button>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}
+{% block scripts %}
+<script>
+const ini = document.getElementById('dt-inicio');
+const dias = document.getElementById('dt-dias');
+const venc = document.getElementById('dt-venc');
+ini.value = new Date().toISOString().split('T')[0];
+function calcVenc(){
+  if(ini.value && dias.value){
+    const d = new Date(ini.value);
+    d.setDate(d.getDate() + parseInt(dias.value));
+    venc.value = d.toISOString().split('T')[0];
+  }
+}
+ini.addEventListener('change', calcVenc);
+dias.addEventListener('input', calcVenc);
+calcVenc();
+</script>
+{% endblock %}

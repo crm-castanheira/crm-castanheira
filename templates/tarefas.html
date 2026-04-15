@@ -1,0 +1,291 @@
+{% extends 'base.html' %}
+{% block title %}Tarefas · CRM Castanheira{% endblock %}
+{% block page_title %}Central de Tarefas{% endblock %}
+{% block page_sub %}Gerencie petições, pesquisas, novos casos e demandas do dia{% endblock %}
+{% block topbar_actions %}
+  <button class="btn btn-gold" onclick="abrirModal()">+ Nova Tarefa</button>
+{% endblock %}
+{% block content %}
+
+<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:.85rem;margin-bottom:1rem">
+  <div class="metric" style="border-left:3px solid var(--red)">
+    <div class="metric-label">Urgentes</div>
+    <div class="metric-value" style="color:var(--red)">{{ abertas|selectattr('prioridade','eq','urgente')|list|length }}</div>
+  </div>
+  <div class="metric" style="border-left:3px solid var(--amber)">
+    <div class="metric-label">Em aberto</div>
+    <div class="metric-value">{{ abertas|length }}</div>
+  </div>
+  <div class="metric" style="border-left:3px solid var(--green)">
+    <div class="metric-label">Concluídas (histórico)</div>
+    <div class="metric-value" style="color:var(--green)">{{ concluidas|length }}</div>
+  </div>
+</div>
+
+<!-- ABAS DE FILTRO -->
+<div style="display:flex;gap:6px;margin-bottom:1rem;border-bottom:1px solid var(--border2);padding-bottom:.6rem">
+  <button class="btn btn-outline btn-sm" id="aba-todas"       onclick="abaFiltrar('todas')"       style="border-color:var(--gold)">Todas <span id="cnt-todas"    class="pill pill-gray" style="margin-left:4px">{{ abertas|length }}</span></button>
+  <button class="btn btn-outline btn-sm" id="aba-intimacoes"  onclick="abaFiltrar('intimacoes')"                                  >Intimações <span id="cnt-intimacoes" class="pill pill-gray" style="margin-left:4px">{{ abertas|selectattr('tipo','eq','publicacao')|list|length }}</span></button>
+  <button class="btn btn-outline btn-sm" id="aba-outros"      onclick="abaFiltrar('outros')"                                      >Outros <span id="cnt-outros"   class="pill pill-gray" style="margin-left:4px">{{ abertas|rejectattr('tipo','eq','publicacao')|list|length }}</span></button>
+</div>
+
+<div class="grid2">
+  <!-- TAREFAS ABERTAS -->
+  <div>
+    <div class="card-title" style="margin-bottom:.6rem;font-size:12px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.07em">Abertas</div>
+    {% for t in abertas %}
+    <div class="card" style="margin-bottom:.6rem;border-left:3px solid {% if t.atrasada %}var(--red){% elif t.prioridade=='urgente' %}var(--red){% elif t.prioridade=='normal' %}var(--gold){% else %}var(--green){% endif %}" id="tarefa-{{t.id}}" data-tipo="{{ t.tipo }}">
+      <div style="padding:.75rem 1rem">
+        <div style="display:flex;align-items:flex-start;gap:8px">
+          <div style="flex:1">
+            <div style="font-size:13px;font-weight:600;color:var(--text);margin-bottom:3px">
+              {{ t.titulo }}
+              {% if t.atrasada %}<span class="pill pill-red" style="font-size:9px;margin-left:4px;vertical-align:middle">ATRASADA</span>{% endif %}
+            </div>
+            <div style="font-size:11px;color:var(--text3)">
+              {{ t.origem }} · {{ t.tipo }}
+              {% if t.responsavel %} · <span style="color:var(--blue);font-weight:600">{{ t.responsavel }}</span>{% endif %}
+              {% if t.prazo_data %} · <span style="color:{% if t.atrasada %}var(--red){% else %}var(--amber){% endif %};font-weight:600">{{ t.prazo_data.strftime('%d/%m/%Y') }}</span>{% endif %}
+            </div>
+            {% if t.tipo == 'publicacao' and t.publicacao %}
+            <div style="background:var(--bg2);border:1px solid var(--border2);border-radius:6px;padding:.5rem .75rem;margin-top:6px;font-size:11.5px;color:var(--text2);line-height:1.5">
+              <span style="font-weight:600;color:var(--text3);font-size:10px;text-transform:uppercase;letter-spacing:.06em">Publicação · {{ t.publicacao.pje_tribunal or t.publicacao.fonte }}</span>
+              {% if t.publicacao.pje_numero %}<span style="margin-left:6px;font-family:monospace;font-size:10px;color:var(--text3)">{{ t.publicacao.pje_numero }}</span>{% endif %}
+              <div style="margin-top:4px">{{ t.publicacao.conteudo[:300] if t.publicacao.conteudo else '(sem conteúdo)' }}{% if t.publicacao.conteudo and t.publicacao.conteudo|length > 300 %}…{% endif %}</div>
+              {% if t.publicacao.pje_link %}
+              <a href="{{ t.publicacao.pje_link }}" target="_blank" style="font-size:10px;color:var(--gold);margin-top:4px;display:inline-block">Ver documento ↗</a>
+              {% endif %}
+            </div>
+            {% elif t.descricao %}
+            <div style="font-size:11.5px;color:var(--text2);margin-top:5px;line-height:1.5">{{ t.descricao[:160] }}{% if t.descricao|length > 160 %}…{% endif %}</div>
+            {% endif %}
+            {% if t.ia_sugestao %}
+            <div class="ia-box" style="margin-top:8px">
+              <div class="ia-label">Orientação IA</div>
+              <div class="ia-text">{{ t.ia_sugestao }}</div>
+            </div>
+            {% endif %}
+          </div>
+        </div>
+        <div style="display:flex;gap:6px;margin-top:.6rem;flex-wrap:wrap;align-items:center">
+          <span class="pill {% if t.prioridade=='urgente' %}pill-red{% elif t.prioridade=='normal' %}pill-gold{% else %}pill-green{% endif %}">{{ t.prioridade }}</span>
+          {% if t.tipo == 'publicacao' %}
+          <span class="pill" style="background:var(--blue-bg,#e8f0fe);color:var(--blue-t,#1a56db);border:1px solid #bdd0fb">📋 Publicação</span>
+          {% else %}
+          <span class="pill pill-gray">{{ t.tipo }}</span>
+          {% endif %}
+          {% if t.processo %}<span class="pill pill-blue" style="font-family:monospace;font-size:9px">{{ t.processo.numero[:20] }}</span>{% endif %}
+          <span style="margin-left:auto;display:flex;gap:5px">
+            <button class="btn btn-outline btn-sm" onclick="consultarIA({{ t.id }})">✨ IA</button>
+            <button class="btn btn-outline btn-sm" style="color:var(--text3)" onclick="cancelar({{ t.id }})">✕ Cancelar</button>
+            <button class="btn btn-green btn-sm" onclick="concluir({{ t.id }})">✓ Concluir</button>
+          </span>
+        </div>
+      </div>
+    </div>
+    {% else %}
+    <div class="card"><div class="empty"><div class="empty-icon">🎉</div><div class="empty-text">Nenhuma tarefa aberta!</div></div></div>
+    {% endfor %}
+  </div>
+
+  <!-- HISTÓRICO -->
+  <div>
+    <div class="card-title" style="margin-bottom:.6rem;font-size:12px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.07em">Histórico de Concluídas</div>
+    {% for t in concluidas %}
+    <div class="card" style="margin-bottom:.6rem;opacity:.8;border-left:3px solid var(--green)">
+      <div style="padding:.7rem 1rem">
+        <div style="display:flex;align-items:center;gap:8px">
+          <span style="font-size:14px">✅</span>
+          <div style="flex:1">
+            <div style="font-size:12.5px;font-weight:600;color:var(--text)">{{ t.titulo }}</div>
+            <div style="font-size:11px;color:var(--text3)">{{ t.origem }} · {{ t.concluida_em.strftime('%d/%m/%Y %H:%M') if t.concluida_em else '—' }}</div>
+          </div>
+          <span class="pill pill-green">Feita</span>
+        </div>
+        {% if t.descricao %}
+        <div style="font-size:11px;color:var(--text3);margin-top:5px">{{ t.descricao[:100] }}{% if t.descricao|length > 100 %}…{% endif %}</div>
+        {% endif %}
+      </div>
+    </div>
+    {% else %}
+    <div class="card"><div class="empty"><div class="empty-icon">📋</div><div class="empty-text">Nenhuma tarefa concluída ainda.</div></div></div>
+    {% endfor %}
+  </div>
+</div>
+
+<!-- MODAL NOVA TAREFA -->
+<div class="modal-backdrop" id="modal">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title">Nova Tarefa</div>
+      <button class="modal-close" onclick="fecharModal()">✕</button>
+    </div>
+    <form id="form-tarefa">
+      <div class="form-group">
+        <label>Como chegou a demanda?</label>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:4px">
+          <label style="cursor:pointer;padding:8px 10px;border:1.5px solid var(--border2);border-radius:8px;display:flex;align-items:center;gap:6px;font-size:12px;font-weight:400" onclick="selOrig(this,'whatsapp')">
+            <input type="radio" name="origem" value="whatsapp" style="width:auto;padding:0"> 📱 WhatsApp
+          </label>
+          <label style="cursor:pointer;padding:8px 10px;border:1.5px solid var(--border2);border-radius:8px;display:flex;align-items:center;gap:6px;font-size:12px;font-weight:400" onclick="selOrig(this,'ligacao')">
+            <input type="radio" name="origem" value="ligacao" style="width:auto;padding:0"> 📞 Ligação
+          </label>
+          <label style="cursor:pointer;padding:8px 10px;border:1.5px solid var(--border2);border-radius:8px;display:flex;align-items:center;gap:6px;font-size:12px;font-weight:400" onclick="selOrig(this,'diario')">
+            <input type="radio" name="origem" value="diario" style="width:auto;padding:0"> 📋 Diário Oficial
+          </label>
+          <label style="cursor:pointer;padding:8px 10px;border:1.5px solid var(--border2);border-radius:8px;display:flex;align-items:center;gap:6px;font-size:12px;font-weight:400" onclick="selOrig(this,'pessoal')">
+            <input type="radio" name="origem" value="pessoal" style="width:auto;padding:0"> ✏️ Anotação pessoal
+          </label>
+          <label style="cursor:pointer;padding:8px 10px;border:1.5px solid var(--border2);border-radius:8px;display:flex;align-items:center;gap:6px;font-size:12px;font-weight:400" onclick="selOrig(this,'steffany')">
+            <input type="radio" name="origem" value="steffany" style="width:auto;padding:0"> 👩 Steffany
+          </label>
+        </div>
+      </div>
+      <div class="form-group">
+        <label>Responsável</label>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:4px">
+          <label style="cursor:pointer;padding:8px 10px;border:1.5px solid var(--gold);border-radius:8px;display:flex;align-items:center;gap:6px;font-size:12px;font-weight:400" id="resp-jardel" onclick="selResp(this,'Jardel')">
+            <input type="radio" name="responsavel" value="Jardel" checked style="width:auto;padding:0"> ⚖️ Jardel
+          </label>
+          <label style="cursor:pointer;padding:8px 10px;border:1.5px solid var(--border2);border-radius:8px;display:flex;align-items:center;gap:6px;font-size:12px;font-weight:400" id="resp-steffany" onclick="selResp(this,'Steffany')">
+            <input type="radio" name="responsavel" value="Steffany" style="width:auto;padding:0"> 👩 Steffany
+          </label>
+        </div>
+      </div>
+      <div class="form-row cols2">
+        <div>
+          <label>Tipo de Tarefa</label>
+          <select name="tipo">
+            <option value="peticao">⚖️ Petição</option>
+            <option value="recurso">📑 Recurso</option>
+            <option value="pesquisa">🔍 Pesquisa</option>
+            <option value="novo_caso">🆕 Novo Caso</option>
+            <option value="outro">📌 Outro</option>
+          </select>
+        </div>
+        <div>
+          <label>Prioridade</label>
+          <select name="prioridade">
+            <option value="urgente">🔴 Urgente</option>
+            <option value="normal" selected>🟡 Normal</option>
+            <option value="baixa">🟢 Baixa</option>
+          </select>
+        </div>
+      </div>
+      <div class="form-group">
+        <label>Título da Tarefa</label>
+        <input type="text" name="titulo" placeholder="Ex: Contestação — Proc. 0001234 · Maria Aparecida" required>
+      </div>
+      <div class="form-row cols2">
+        <div>
+          <label>Processo (opcional)</label>
+          <select name="processo_id">
+            <option value="">— Sem processo vinculado —</option>
+            {% for proc in processos %}
+            <option value="{{ proc.id }}">{{ proc.numero }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div>
+          <label>Prazo / Data limite</label>
+          <input type="date" name="prazo_data">
+        </div>
+      </div>
+      <div class="form-group">
+        <label>Descrição (o que foi pedido / o que aconteceu)</label>
+        <textarea name="descricao" placeholder="Descreva o que foi solicitado pelo cliente, o conteúdo da ligação, mensagem recebida, etc..."></textarea>
+      </div>
+      <div id="ia-sugestao-box" class="ia-box" style="display:none;margin-bottom:.75rem">
+        <div class="ia-label">Sugestão da IA Jurídica</div>
+        <div class="ia-text" id="ia-sugestao-text">Analisando...</div>
+      </div>
+      <div style="display:flex;gap:8px;justify-content:flex-end">
+        <button type="button" class="btn btn-outline" onclick="pedirSugestao()">✨ Sugestão IA</button>
+        <button type="button" class="btn btn-outline" onclick="fecharModal()">Cancelar</button>
+        <button type="submit" class="btn btn-gold">Salvar Tarefa</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+{% endblock %}
+{% block scripts %}
+<script>
+function abrirModal(){ document.getElementById('modal').classList.add('open'); }
+function fecharModal(){ document.getElementById('modal').classList.remove('open'); }
+
+function selOrig(el, val){
+  document.querySelectorAll('[onclick^="selOrig"]').forEach(x=>x.style.borderColor='var(--border2)');
+  el.style.borderColor='var(--gold)';
+}
+
+function selResp(el, val){
+  document.querySelectorAll('[onclick^="selResp"]').forEach(x=>x.style.borderColor='var(--border2)');
+  el.style.borderColor='var(--gold)';
+}
+
+document.getElementById('form-tarefa').addEventListener('submit', async function(e){
+  e.preventDefault();
+  const fd = new FormData(this);
+  const r = await fetch('/tarefas/nova', {method:'POST', body:fd});
+  if((await r.json()).ok){ location.reload(); }
+});
+
+function abaFiltrar(aba) {
+  ['todas','intimacoes','outros'].forEach(a => document.getElementById('aba-'+a).style.borderColor='');
+  document.getElementById('aba-'+aba).style.borderColor='var(--gold)';
+  document.querySelectorAll('[data-tipo]').forEach(card => {
+    const tipo = card.dataset.tipo;
+    if (aba === 'todas')       card.style.display = '';
+    else if (aba === 'intimacoes') card.style.display = tipo === 'publicacao' ? '' : 'none';
+    else if (aba === 'outros')     card.style.display = tipo !== 'publicacao' ? '' : 'none';
+  });
+}
+
+async function concluir(id){
+  if(!confirm('Marcar tarefa como concluída?')) return;
+  const r = await fetch(`/tarefas/${id}/concluir`, {method:'POST'});
+  const d = await r.json();
+  if(d.ok){
+    if(d.prazo_fechado) alert('Tarefa concluída e prazo marcado como Cumprido automaticamente.');
+    const el = document.getElementById('tarefa-'+id);
+    if(el){ el.style.opacity='.4'; el.style.transition='opacity .4s'; setTimeout(()=>location.reload(),500); }
+  }
+}
+
+async function cancelar(id){
+  if(!confirm('Cancelar esta tarefa?')) return;
+  const r = await fetch(`/tarefas/${id}/cancelar`, {method:'POST'});
+  const d = await r.json();
+  if(d.ok){
+    const el = document.getElementById('tarefa-'+id);
+    if(el){ el.style.opacity='.3'; el.style.transition='opacity .4s'; setTimeout(()=>location.reload(),500); }
+  }
+}
+
+async function consultarIA(id){
+  const btns = document.querySelectorAll(`#tarefa-${id} button`);
+  btns.forEach(b=>b.disabled=true);
+  const r = await fetch(`/tarefas/${id}/ia`, {method:'POST'});
+  const d = await r.json();
+  if(d.ok){ location.reload(); }
+  else{ alert('Erro ao consultar IA: '+d.erro); btns.forEach(b=>b.disabled=false); }
+}
+
+async function pedirSugestao(){
+  const box = document.getElementById('ia-sugestao-box');
+  const txt = document.getElementById('ia-sugestao-text');
+  const form = document.getElementById('form-tarefa');
+  const dados = new FormData(form);
+  box.style.display='block';
+  txt.textContent='Analisando com IA jurídica...';
+  const r = await fetch('/tarefas/nova', {method:'POST', body:dados});
+  const d = await r.json();
+  if(d.ok){
+    const ir = await fetch(`/tarefas/${d.id}/ia`, {method:'POST'});
+    const id2 = await ir.json();
+    txt.textContent = id2.sugestao || 'Sugestão gerada. Salve a tarefa para ver.';
+  }
+}
+</script>
+{% endblock %}
