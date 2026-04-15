@@ -79,7 +79,61 @@
             <button class="btn btn-outline btn-sm" onclick="consultarIA({{ t.id }})">✨ IA</button>
             <button class="btn btn-outline btn-sm" style="color:var(--text3)" onclick="cancelar({{ t.id }})">✕ Cancelar</button>
             <button class="btn btn-green btn-sm" onclick="concluir({{ t.id }})">✓ Concluir</button>
+            <button class="btn btn-outline btn-sm" style="color:var(--blue-t,#1a56db);border-color:var(--blue-t,#1a56db)" onclick="toggleComentario({{ t.id }})">💬 Comentar</button>
           </span>
+        </div>
+
+        <!-- ÁREA INLINE DE COMENTÁRIO / SUB-TAREFA -->
+        <div id="comentario-area-{{ t.id }}" style="display:none;margin-top:.75rem;border-top:1px solid var(--border2);padding-top:.75rem">
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:6px">
+            <div>
+              <label style="font-size:10px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.05em">Tipo</label>
+              <select id="com-tipo-{{ t.id }}" style="font-size:12px;padding:4px 8px;margin-top:2px" onchange="toggleTipoComentario({{ t.id }})">
+                <option value="comentario">💬 Comentário</option>
+                <option value="subtarefa">✅ Sub-tarefa</option>
+              </select>
+            </div>
+            <div>
+              <label style="font-size:10px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.05em">Responsável</label>
+              <select id="com-resp-{{ t.id }}" style="font-size:12px;padding:4px 8px;margin-top:2px">
+                <option value="Jardel">⚖️ Jardel</option>
+                <option value="Steffany">👩 Steffany</option>
+              </select>
+            </div>
+          </div>
+          <textarea id="com-texto-{{ t.id }}" rows="2"
+            style="font-size:12px;padding:6px 8px;margin-bottom:6px;resize:vertical"
+            placeholder="Observação ou título da sub-tarefa..."></textarea>
+          <div style="display:flex;gap:8px;align-items:center">
+            <div style="flex:1">
+              <label style="font-size:10px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.05em">Prazo (opcional)</label>
+              <input type="date" id="com-prazo-{{ t.id }}" style="font-size:12px;padding:4px 8px;margin-top:2px;display:block">
+            </div>
+            <div style="display:flex;gap:6px;align-self:flex-end">
+              <button class="btn btn-outline btn-sm" onclick="toggleComentario({{ t.id }})">Fechar</button>
+              <button class="btn btn-gold btn-sm" onclick="salvarComentario({{ t.id }})">Salvar</button>
+            </div>
+          </div>
+
+          <!-- LISTA DE COMENTÁRIOS EXISTENTES -->
+          <div id="comentarios-lista-{{ t.id }}" style="margin-top:.6rem">
+            {% for c in t.comentarios %}
+            <div class="comentario-item{% if c.tipo == 'subtarefa' %} subtarefa-item{% endif %}" style="display:flex;gap:8px;align-items:flex-start;padding:5px 0;border-top:1px dashed var(--border2)">
+              {% if c.tipo == 'subtarefa' %}
+              <span style="font-size:13px;margin-top:1px">✅</span>
+              {% else %}
+              <span style="font-size:13px;margin-top:1px">💬</span>
+              {% endif %}
+              <div style="flex:1;font-size:11.5px;color:var(--text2)">
+                <span style="font-weight:600;color:var(--text)">{{ c.autor }}</span>
+                <span style="color:var(--text3)"> {{ c.criado_em.strftime('%d/%m %H:%M') }}</span>
+                {% if c.responsavel and c.responsavel != c.autor %}<span class="pill pill-blue" style="font-size:9px;margin-left:4px">→ {{ c.responsavel }}</span>{% endif %}
+                {% if c.prazo_data %}<span class="pill pill-gold" style="font-size:9px;margin-left:4px">até {{ c.prazo_data.strftime('%d/%m') }}</span>{% endif %}
+                <div style="margin-top:2px">{{ c.texto }}</div>
+              </div>
+            </div>
+            {% endfor %}
+          </div>
         </div>
       </div>
     </div>
@@ -286,6 +340,77 @@ async function pedirSugestao(){
     const id2 = await ir.json();
     txt.textContent = id2.sugestao || 'Sugestão gerada. Salve a tarefa para ver.';
   }
+}
+
+// ── Comentários / Sub-tarefas inline ────────────────────────────────────────
+
+function toggleComentario(id) {
+  const area = document.getElementById('comentario-area-' + id);
+  const aberto = area.style.display !== 'none';
+  area.style.display = aberto ? 'none' : 'block';
+  if (!aberto) {
+    const txt = document.getElementById('com-texto-' + id);
+    if (txt) txt.focus();
+  }
+}
+
+function toggleTipoComentario(id) {
+  const tipo = document.getElementById('com-tipo-' + id).value;
+  const txt  = document.getElementById('com-texto-' + id);
+  txt.placeholder = tipo === 'subtarefa'
+    ? 'Título da sub-tarefa (ex: Juntar documentos até sexta)'
+    : 'Observação sobre esta intimação...';
+}
+
+async function salvarComentario(id) {
+  const tipo      = document.getElementById('com-tipo-'  + id).value;
+  const texto     = document.getElementById('com-texto-' + id).value.trim();
+  const responsavel = document.getElementById('com-resp-' + id).value;
+  const prazo_data  = document.getElementById('com-prazo-' + id).value;
+
+  if (!texto) { alert('Digite o texto antes de salvar.'); return; }
+
+  const url = tipo === 'subtarefa'
+    ? `/tarefas/${id}/subtarefa`
+    : `/tarefas/${id}/comentar`;
+
+  const payload = tipo === 'subtarefa'
+    ? { titulo: texto, responsavel, prazo_data }
+    : { texto,         responsavel, prazo_data };
+
+  const r = await fetch(url, {
+    method:  'POST',
+    headers: {'Content-Type': 'application/json'},
+    body:    JSON.stringify(payload),
+  });
+  const d = await r.json();
+  if (!d.ok) { alert('Erro: ' + d.erro); return; }
+
+  // Limpa o formulário
+  document.getElementById('com-texto-' + id).value = '';
+  document.getElementById('com-prazo-' + id).value = '';
+
+  // Renderiza o novo item na lista sem reload
+  const lista = document.getElementById('comentarios-lista-' + id);
+  const icone = d.tipo === 'subtarefa' ? '✅' : '💬';
+  const prazoTag = d.prazo_data
+    ? `<span class="pill pill-gold" style="font-size:9px;margin-left:4px">até ${d.prazo_data}</span>`
+    : '';
+  const respTag = (d.responsavel && d.responsavel !== d.autor)
+    ? `<span class="pill pill-blue" style="font-size:9px;margin-left:4px">→ ${d.responsavel}</span>`
+    : '';
+
+  const item = document.createElement('div');
+  item.style.cssText = 'display:flex;gap:8px;align-items:flex-start;padding:5px 0;border-top:1px dashed var(--border2)';
+  item.innerHTML = `
+    <span style="font-size:13px;margin-top:1px">${icone}</span>
+    <div style="flex:1;font-size:11.5px;color:var(--text2)">
+      <span style="font-weight:600;color:var(--text)">${d.autor}</span>
+      <span style="color:var(--text3)"> ${d.criado_em}</span>
+      ${respTag}${prazoTag}
+      <div style="margin-top:2px">${d.texto}</div>
+    </div>`;
+  lista.appendChild(item);
 }
 </script>
 {% endblock %}

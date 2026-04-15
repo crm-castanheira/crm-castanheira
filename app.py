@@ -56,6 +56,23 @@ def create_app(env: str = None) -> Flask:
             'usuario_perfil': session.get('perfil', ''),
         }
 
+    # Filtro de data em português brasileiro
+    _DIAS_PT   = ['Segunda-feira','Terça-feira','Quarta-feira','Quinta-feira','Sexta-feira','Sábado','Domingo']
+    _MESES_PT  = ['janeiro','fevereiro','março','abril','maio','junho','julho',
+                  'agosto','setembro','outubro','novembro','dezembro']
+
+    @app.template_filter('data_ptbr')
+    def data_ptbr_filter(d):
+        if not d:
+            return ''
+        return f"{_DIAS_PT[d.weekday()]}, {d.day} de {_MESES_PT[d.month - 1]} de {d.year}"
+
+    @app.template_filter('mes_ptbr')
+    def mes_ptbr_filter(d):
+        if not d:
+            return ''
+        return f"{d.day:02d}/{_MESES_PT[d.month - 1][:3]}/{d.year}"
+
     with app.app_context():
         db.create_all()
         _migrar_banco(db)
@@ -74,6 +91,7 @@ def _migrar_banco(db):
                 ("responsavel",            "VARCHAR(50) DEFAULT 'Jardel'"),
                 ("criado_por",             "VARCHAR(50) DEFAULT 'Jardel'"),
                 ("concluida_por",          "VARCHAR(50)"),
+                ("pai_id",                 "INTEGER REFERENCES tarefa(id)"),
             ],
             'prazo': [
                 ("publicacao_id",          "INTEGER REFERENCES publicacao(id)"),
@@ -102,11 +120,12 @@ def _migrar_banco(db):
 def _retroativo_publicacoes():
     """
     Para publicações existentes sem tarefa vinculada:
-      1. Tenta ligar o prazo à publicação (melhor match por data + processo).
-      2. Cria a tarefa de análise usando o serviço padrão.
+      1. Tenta vincular a publicação ao processo pelo pje_numero (CNJ).
+      2. Tenta ligar o prazo à publicação (melhor match por data + processo).
+      3. Cria a tarefa de análise usando o serviço padrão.
     Idempotente: ignora publicações que já têm tarefa.
     """
-    from models import Publicacao, Prazo, Tarefa
+    from models import Publicacao, Processo, Prazo, Tarefa
     from services.publicacao_service import criar_tarefa_de_publicacao
 
     pubs_sem_tarefa = (
@@ -120,6 +139,16 @@ def _retroativo_publicacoes():
         return
 
     for pub in pubs_sem_tarefa:
+        # Tenta vincular ao processo pelo pje_numero se ainda não vinculado
+        if not pub.processo_id and pub.pje_numero:
+            nr = pub.pje_numero.strip()
+            proc = (
+                Processo.query.filter_by(numero=nr).first()
+                or Processo.query.filter(Processo.numero.contains(nr[:20])).first()
+            )
+            if proc:
+                pub.processo_id = proc.id
+
         # Tenta encontrar o prazo correspondente pelo heurístico:
         # mesma data de início, mesmo processo, publicacao_id ainda não vinculado
         q = Prazo.query.filter(

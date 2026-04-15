@@ -36,6 +36,17 @@ def publicacoes():
     )
 
 
+def _buscar_processo_por_numero(numero_cnj: str):
+    """Busca processo pelo número CNJ exato ou por correspondência parcial."""
+    if not numero_cnj:
+        return None
+    numero_limpo = numero_cnj.strip()
+    proc = Processo.query.filter_by(numero=numero_limpo).first()
+    if not proc:
+        proc = Processo.query.filter(Processo.numero.contains(numero_limpo[:20])).first()
+    return proc
+
+
 @bp.route('/nova', methods=['POST'])
 def nova_publicacao():
     data_pub = datetime.strptime(request.form['data_pub'], '%Y-%m-%d').date()
@@ -43,13 +54,22 @@ def nova_publicacao():
     conteudo = request.form.get('conteudo', '')
     tem_efeito = detectar_efeito_intimatorio(conteudo)
 
+    # Tenta vincular ao processo: primeiro pelo campo do form, depois pelo pje_numero
+    processo_id = request.form.get('processo_id') or None
+    pje_numero  = request.form.get('pje_numero', '').strip() or None
+    if not processo_id and pje_numero:
+        proc = _buscar_processo_por_numero(pje_numero)
+        if proc:
+            processo_id = proc.id
+
     pub = Publicacao(
         data_pub               = data_pub,
         fonte                  = request.form.get('fonte'),
         tipo                   = request.form.get('tipo'),
         conteudo               = conteudo,
         dias_prazo             = dias,
-        processo_id            = request.form.get('processo_id') or None,
+        processo_id            = processo_id,
+        pje_numero             = pje_numero,
         tem_efeito_intimatorio = tem_efeito,
         status                 = 'pendente',
     )
@@ -60,17 +80,19 @@ def nova_publicacao():
     if tem_efeito:
         data_venc = adicionar_dias_uteis(data_pub, dias)
         prazo_venc_fmt = data_venc.strftime('%d/%m/%Y')
+        nr_proc = (pub.processo.numero if pub.processo else pje_numero or request.form.get('tipo', ''))
         pr = Prazo(
-            tipo        = f"Prazo – {request.form.get('tipo')}",
+            tipo        = f"Prazo – {request.form.get('tipo')} – {nr_proc}"[:100],
             descricao   = (
                 f"Originado da publicação de {data_pub.strftime('%d/%m/%Y')}: "
                 f"{conteudo[:120]}"
             ),
-            data_inicio = data_pub,
-            data_venc   = data_venc,
-            dias        = dias,
-            contagem    = 'Úteis',
-            processo_id = request.form.get('processo_id') or None,
+            data_inicio   = data_pub,
+            data_venc     = data_venc,
+            dias          = dias,
+            contagem      = 'Úteis',
+            processo_id   = processo_id,
+            publicacao_id = pub.id,
         )
         db.session.add(pr)
         db.session.flush()

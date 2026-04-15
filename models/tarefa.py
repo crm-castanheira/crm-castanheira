@@ -23,6 +23,11 @@ class Tarefa(db.Model):
     prazo_id      = db.Column(db.Integer, db.ForeignKey('prazo.id'), nullable=True)
     prazo_vinc    = db.relationship('Prazo', foreign_keys='Tarefa.prazo_id',
                                     backref=db.backref('tarefa_vinc', uselist=False))
+    pai_id        = db.Column(db.Integer, db.ForeignKey('tarefa.id'), nullable=True)
+    subtarefas    = db.relationship('Tarefa', foreign_keys='[Tarefa.pai_id]',
+                                    backref=db.backref('pai', remote_side='[Tarefa.id]'), lazy=True)
+    comentarios   = db.relationship('Comentario', backref='tarefa', lazy=True,
+                                    order_by='Comentario.criado_em')
 
     @property
     def atrasada(self) -> bool:

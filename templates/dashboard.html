@@ -1,7 +1,7 @@
 {% extends 'base.html' %}
 {% block title %}Dashboard · CRM Castanheira{% endblock %}
 {% block page_title %}Bom dia, Dr. Jardel 👋{% endblock %}
-{% block page_sub %}{{ hoje.strftime('%A, %d de %B de %Y') }} · Castanheira e Reis Advogados Associados{% endblock %}
+{% block page_sub %}{{ hoje | data_ptbr }} · Castanheira e Reis Advogados Associados{% endblock %}
 {% block topbar_actions %}
   <a href="/publicacoes" class="btn btn-gold">+ Registrar Publicação</a>
 {% endblock %}
