@@ -47,6 +47,32 @@
               {% if t.responsavel %} · <span style="color:var(--blue);font-weight:600">{{ t.responsavel }}</span>{% endif %}
               {% if t.prazo_data %} · <span style="color:{% if t.atrasada %}var(--red){% else %}var(--amber){% endif %};font-weight:600">{{ t.prazo_data.strftime('%d/%m/%Y') }}</span>{% endif %}
             </div>
+
+            {# ── Ficha do processo ──────────────────────────────────────── #}
+            {% if t.processo %}
+            <div style="background:var(--bg2);border:1px solid var(--border2);border-radius:6px;padding:.4rem .65rem;margin-top:6px;display:flex;flex-wrap:wrap;gap:6px;align-items:center">
+              <span style="font-family:monospace;font-size:10.5px;color:var(--text);font-weight:600">{{ t.processo.numero }}</span>
+              <span style="font-size:10px;color:var(--text3)">·</span>
+              <span style="font-size:10px;color:var(--text2)">{{ t.processo.tipo }}</span>
+              {% if t.processo.comarca %}
+              <span style="font-size:10px;color:var(--text3)">· {{ t.processo.comarca }}</span>
+              {% endif %}
+              <span style="margin-left:auto;display:flex;gap:5px;align-items:center">
+                {% if t.processo.polo == 'Autor' %}
+                <span style="font-size:10px;font-weight:700;color:#1a56db;background:#e8f0fe;border:1px solid #bdd0fb;border-radius:4px;padding:1px 6px">⚖️ Autor</span>
+                {% elif t.processo.polo == 'Réu' %}
+                <span style="font-size:10px;font-weight:700;color:#7c3aed;background:#ede9fe;border:1px solid #c4b5fd;border-radius:4px;padding:1px 6px">🛡️ Réu</span>
+                {% else %}
+                <span style="font-size:10px;font-weight:700;color:var(--text3);background:var(--bg2);border:1px solid var(--border2);border-radius:4px;padding:1px 6px">{{ t.processo.polo }}</span>
+                {% endif %}
+                {% if t.processo.cliente %}
+                <span style="font-size:10px;font-weight:600;color:var(--text);background:var(--bg);border:1px solid var(--border2);border-radius:4px;padding:1px 6px">👤 {{ t.processo.cliente.nome }}</span>
+                {% endif %}
+              </span>
+            </div>
+            {% endif %}
+            {# ─────────────────────────────────────────────────────────── #}
+
             {% if t.tipo == 'publicacao' and t.publicacao %}
             <div style="background:var(--bg2);border:1px solid var(--border2);border-radius:6px;padding:.5rem .75rem;margin-top:6px;font-size:11.5px;color:var(--text2);line-height:1.5">
               <span style="font-weight:600;color:var(--text3);font-size:10px;text-transform:uppercase;letter-spacing:.06em">Publicação · {{ t.publicacao.pje_tribunal or t.publicacao.fonte }}</span>
