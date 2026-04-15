@@ -95,6 +95,9 @@ def _migrar_banco(db):
             ],
             'prazo': [
                 ("publicacao_id",          "INTEGER REFERENCES publicacao(id)"),
+                ("origem",                 "VARCHAR(20) DEFAULT 'manual'"),
+                ("obs_cumprimento",        "TEXT"),
+                ("data_cumprimento",       "DATE"),
             ],
             'publicacao': [
                 ("status",                 "VARCHAR(20) DEFAULT 'pendente'"),
@@ -160,6 +163,17 @@ def _retroativo_publicacoes():
         prazo = q.first()
 
         criar_tarefa_de_publicacao(pub, prazo)
+
+    # Propaga processo_id de pubs já vinculadas para prazos/tarefas órfãos
+    from models import Tarefa
+    for prazo in Prazo.query.filter(Prazo.processo_id.is_(None), Prazo.publicacao_id.isnot(None)).all():
+        pub = db.session.get(Publicacao, prazo.publicacao_id)
+        if pub and pub.processo_id:
+            prazo.processo_id = pub.processo_id
+    for t in Tarefa.query.filter(Tarefa.processo_id.is_(None), Tarefa.publicacao_id.isnot(None)).all():
+        pub = db.session.get(Publicacao, t.publicacao_id)
+        if pub and pub.processo_id:
+            t.processo_id = pub.processo_id
 
     db.session.commit()
 

@@ -11,10 +11,13 @@ class Prazo(db.Model):
     dias        = db.Column(db.Integer)
     contagem    = db.Column(db.String(20), default='Corridos')
     status      = db.Column(db.String(20), default='Pendente')
-    processo_id   = db.Column(db.Integer, db.ForeignKey('processo.id'))
-    publicacao_id = db.Column(db.Integer, db.ForeignKey('publicacao.id'), nullable=True)
-    publicacao    = db.relationship('Publicacao', backref=db.backref('prazos_pub', lazy=True))
-    criado_em     = db.Column(db.DateTime, default=datetime.utcnow)
+    processo_id      = db.Column(db.Integer, db.ForeignKey('processo.id'))
+    publicacao_id    = db.Column(db.Integer, db.ForeignKey('publicacao.id'), nullable=True)
+    publicacao       = db.relationship('Publicacao', backref=db.backref('prazos_pub', lazy=True))
+    origem           = db.Column(db.String(20), default='manual')   # publicacao | manual | agenda
+    obs_cumprimento  = db.Column(db.Text)
+    data_cumprimento = db.Column(db.Date)
+    criado_em        = db.Column(db.DateTime, default=datetime.utcnow)
 
     @property
     def dias_restantes(self):

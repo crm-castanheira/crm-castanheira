@@ -2,30 +2,64 @@
 {% block title %}Novo Prazo · CRM Castanheira{% endblock %}
 {% block page_title %}Lançar Prazo Processual{% endblock %}
 {% block content %}
-<div class="card" style="max-width:600px">
+<div class="card" style="max-width:620px">
   <div class="card-header"><span class="card-title">Dados do Prazo</span></div>
   <div class="card-body">
     <form method="post">
-      <div class="form-group"><label>Processo</label>
+      <div class="form-group">
+        <label>Processo</label>
         <select name="processo_id">
           <option value="">— Sem processo vinculado —</option>
-          {% for p in processos %}<option value="{{ p.id }}">{{ p.numero }} — {{ p.tipo }}</option>{% endfor %}
+          {% for p in processos %}
+          <option value="{{ p.id }}">{{ p.numero }} — {{ p.tipo }}</option>
+          {% endfor %}
         </select>
       </div>
       <div class="form-row cols2">
-        <div><label>Tipo de Prazo</label>
-          <select name="tipo"><option>Contestação</option><option>Recurso</option><option>Apelação</option><option>Agravo</option><option>Memorial</option><option>Réplica</option><option>Embargos</option><option>Impugnação</option><option>Outro</option></select>
+        <div>
+          <label>Tipo de Prazo</label>
+          <select name="tipo" id="tipo" onchange="preencherPadrao()">
+            <option value="Contestação">Contestação</option>
+            <option value="Apelação">Apelação</option>
+            <option value="Agravo">Agravo</option>
+            <option value="Agravo de Instrumento">Agravo de Instrumento</option>
+            <option value="Embargos de Declaração">Embargos de Declaração</option>
+            <option value="Embargos à Execução">Embargos à Execução</option>
+            <option value="Réplica">Réplica</option>
+            <option value="Memorial">Memorial</option>
+            <option value="Cumprimento de Sentença">Cumprimento de Sentença</option>
+            <option value="Intimação">Intimação</option>
+            <option value="Recurso">Recurso</option>
+            <option value="Impugnação">Impugnação</option>
+            <option value="Outro">Outro</option>
+          </select>
         </div>
-        <div><label>Contagem</label>
-          <select name="contagem"><option>Corridos</option><option>Úteis</option></select>
+        <div>
+          <label>Contagem</label>
+          <select name="contagem" id="contagem">
+            <option value="Úteis">Úteis</option>
+            <option value="Corridos">Corridos</option>
+          </select>
         </div>
       </div>
       <div class="form-row cols3">
-        <div><label>Data de Início</label><input type="date" name="data_inicio" id="dt-inicio"></div>
-        <div><label>Nº de Dias</label><input type="number" name="dias" id="dt-dias" value="15" min="1"></div>
-        <div><label>Vencimento</label><input type="date" name="data_venc" id="dt-venc" required></div>
+        <div>
+          <label>Data de Início</label>
+          <input type="date" name="data_inicio" id="dt-inicio" onchange="calcVenc()">
+        </div>
+        <div>
+          <label>Nº de Dias</label>
+          <input type="number" name="dias" id="dt-dias" value="15" min="1" onchange="calcVenc()" oninput="calcVenc()">
+        </div>
+        <div>
+          <label>Vencimento</label>
+          <input type="date" name="data_venc" id="dt-venc" required>
+        </div>
       </div>
-      <div class="form-group"><label>Descrição / Observações</label><textarea name="descricao" placeholder="Peça a ser elaborada, documentos necessários, estratégia..."></textarea></div>
+      <div class="form-group">
+        <label>Descrição / Observações</label>
+        <textarea name="descricao" placeholder="Peça a ser elaborada, documentos necessários, estratégia..."></textarea>
+      </div>
       <div style="display:flex;gap:8px;justify-content:flex-end">
         <a href="/prazos" class="btn btn-outline">Cancelar</a>
         <button type="submit" class="btn btn-gold">Salvar Prazo</button>
@@ -36,19 +70,43 @@
 {% endblock %}
 {% block scripts %}
 <script>
-const ini = document.getElementById('dt-inicio');
-const dias = document.getElementById('dt-dias');
-const venc = document.getElementById('dt-venc');
-ini.value = new Date().toISOString().split('T')[0];
-function calcVenc(){
-  if(ini.value && dias.value){
-    const d = new Date(ini.value);
-    d.setDate(d.getDate() + parseInt(dias.value));
-    venc.value = d.toISOString().split('T')[0];
+const PRAZOS_PADRAO = {
+  'Contestação':             { dias: 15, contagem: 'Úteis' },
+  'Apelação':                { dias: 15, contagem: 'Úteis' },
+  'Agravo':                  { dias: 15, contagem: 'Úteis' },
+  'Agravo de Instrumento':   { dias: 15, contagem: 'Úteis' },
+  'Embargos de Declaração':  { dias:  5, contagem: 'Úteis' },
+  'Embargos à Execução':     { dias: 15, contagem: 'Úteis' },
+  'Réplica':                 { dias: 15, contagem: 'Úteis' },
+  'Memorial':                { dias: 15, contagem: 'Corridos' },
+  'Cumprimento de Sentença': { dias: 15, contagem: 'Úteis' },
+  'Intimação':               { dias: 15, contagem: 'Corridos' },
+  'Recurso':                 { dias: 15, contagem: 'Úteis' },
+  'Impugnação':              { dias: 15, contagem: 'Úteis' },
+};
+
+function preencherPadrao() {
+  const tipo = document.getElementById('tipo').value;
+  const cfg  = PRAZOS_PADRAO[tipo];
+  if (cfg) {
+    document.getElementById('dt-dias').value  = cfg.dias;
+    document.getElementById('contagem').value = cfg.contagem;
+    calcVenc();
   }
 }
-ini.addEventListener('change', calcVenc);
-dias.addEventListener('input', calcVenc);
+
+function calcVenc() {
+  const inicio = document.getElementById('dt-inicio').value;
+  const dias   = parseInt(document.getElementById('dt-dias').value);
+  if (inicio && dias) {
+    const d = new Date(inicio + 'T12:00:00');
+    d.setDate(d.getDate() + dias);
+    document.getElementById('dt-venc').value = d.toISOString().split('T')[0];
+  }
+}
+
+// Inicializa com hoje e calcula vencimento
+document.getElementById('dt-inicio').value = new Date().toISOString().split('T')[0];
 calcVenc();
 </script>
 {% endblock %}

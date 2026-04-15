@@ -2,83 +2,269 @@
 {% block title %}Prazos · CRM Castanheira{% endblock %}
 {% block page_title %}Controle de Prazos{% endblock %}
 {% block page_sub %}Prazos processuais ordenados por urgência{% endblock %}
-{% block topbar_actions %}<a href="/prazos/novo" class="btn btn-gold">+ Lançar Prazo</a>{% endblock %}
+{% block topbar_actions %}
+  <a href="/prazos/exportar" class="btn btn-outline btn-sm">↓ Exportar CSV</a>
+  <a href="/prazos/novo" class="btn btn-gold">+ Lançar Prazo</a>
+{% endblock %}
 {% block content %}
 
-<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:.85rem;margin-bottom:1rem">
+{# ── Métricas ──────────────────────────────────────────────────────────────── #}
+<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:.85rem;margin-bottom:1rem">
   <div class="metric" style="border-left:3px solid var(--red)">
-    <div class="metric-label">Urgentes (até 48h)</div>
-    <div class="metric-value" style="color:var(--red)">{{ prazos|selectattr('urgencia','in',['urgente','vencido'])|list|length }}</div>
+    <div class="metric-label">Vencidos (sem baixa)</div>
+    <div class="metric-value" style="color:var(--red)">{{ vencidos }}</div>
   </div>
   <div class="metric" style="border-left:3px solid var(--amber)">
+    <div class="metric-label">Urgentes (até 48h)</div>
+    <div class="metric-value" style="color:var(--amber)">{{ urgentes }}</div>
+  </div>
+  <div class="metric" style="border-left:3px solid var(--blue)">
     <div class="metric-label">Esta semana</div>
-    <div class="metric-value">{{ prazos|selectattr('urgencia','eq','atencao')|list|length }}</div>
+    <div class="metric-value">{{ semana }}</div>
   </div>
   <div class="metric" style="border-left:3px solid var(--green)">
-    <div class="metric-label">Cumpridos (últimos)</div>
+    <div class="metric-label">Cumpridos (histórico)</div>
     <div class="metric-value" style="color:var(--green)">{{ cumpridos|length }}</div>
   </div>
 </div>
 
+{# ── Mensagem sem pendentes ────────────────────────────────────────────────── #}
+{% if prazos|length == 0 and not q and not tipo and not de and not ate and status != 'Cumprido' %}
+<div style="background:#f0fdf4;border:1px solid #86efac;border-radius:10px;padding:1rem 1.25rem;display:flex;align-items:center;gap:12px;margin-bottom:1rem">
+  <span style="font-size:22px">🎉</span>
+  <span style="font-size:13px;color:#166534"><strong>Nenhum prazo pendente!</strong> Todos os prazos do período foram cumpridos.</span>
+</div>
+{% endif %}
+
+{# ── Filtros ───────────────────────────────────────────────────────────────── #}
+<form method="get" action="/prazos">
+<div class="card" style="margin-bottom:.85rem;padding:.6rem .85rem">
+  <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+    <select name="status" style="font-size:12px;padding:5px 8px;min-width:130px" onchange="this.form.submit()">
+      <option value=""      {% if not status %}selected{% endif %}>Pendentes (padrão)</option>
+      <option value="Pendente"  {% if status=='Pendente' %}selected{% endif %}>Só no prazo</option>
+      <option value="Vencido"   {% if status=='Vencido'  %}selected{% endif %}>Vencidos</option>
+      <option value="Cumprido"  {% if status=='Cumprido' %}selected{% endif %}>Cumpridos</option>
+    </select>
+    <select name="tipo" style="font-size:12px;padding:5px 8px;min-width:150px" onchange="this.form.submit()">
+      <option value="">Todos os tipos</option>
+      {% for t in ['Intimação','Contestação','Recurso','Apelação','Agravo','Embargos','Réplica','Memorial','Cumprimento de sentença','Lista de distribuição'] %}
+      <option value="{{ t }}" {% if tipo == t %}selected{% endif %}>{{ t }}</option>
+      {% endfor %}
+    </select>
+    <input type="text" name="q" value="{{ q }}" placeholder="Buscar processo..." style="font-size:12px;padding:5px 8px;min-width:180px">
+    <input type="date" name="de"  value="{{ de }}"  style="font-size:12px;padding:5px 8px" title="De">
+    <input type="date" name="ate" value="{{ ate }}" style="font-size:12px;padding:5px 8px" title="Até">
+    <button type="submit" class="btn btn-outline btn-sm">Filtrar</button>
+    <a href="/prazos" class="btn btn-outline btn-sm" style="color:var(--text3)">Limpar</a>
+  </div>
+</div>
+</form>
+
+{# ── Tabela principal ─────────────────────────────────────────────────────── #}
 <div class="card" style="margin-bottom:.85rem">
-  <div class="card-header"><span class="card-title">Prazos Pendentes</span></div>
+  <div class="card-header">
+    <span class="card-title">
+      {% if status == 'Cumprido' %}Prazos Cumpridos
+      {% elif status == 'Vencido' %}Prazos Vencidos sem Baixa
+      {% else %}Prazos Pendentes{% endif %}
+    </span>
+    <span style="font-size:11px;color:var(--text3);margin-left:8px">{{ prazos|length }} registro(s)</span>
+  </div>
   <table>
-    <thead><tr><th></th><th>Tipo</th><th>Processo</th><th>Vencimento</th><th>Dias Restantes</th><th>Contagem</th><th></th></tr></thead>
+    <thead>
+      <tr>
+        <th style="width:18px"></th>
+        <th>Tipo</th>
+        <th>Origem</th>
+        <th>Processo · Polo · Cliente</th>
+        <th>Vencimento</th>
+        <th>Dias Restantes</th>
+        <th></th>
+      </tr>
+    </thead>
     <tbody>
     {% for p in prazos %}
-    <tr id="prazo-{{p.id}}">
+    {% set dr = p.dias_restantes %}
+    <tr id="prazo-{{p.id}}" style="{% if dr < 0 %}background:#fff5f5{% endif %}">
       <td>
-        {% if p.urgencia in ['urgente','vencido'] %}<span class="urgencia-dot dot-red"></span>
+        {% if dr < 0 %}<span class="urgencia-dot dot-red"></span>
+        {% elif p.urgencia == 'urgente' %}<span class="urgencia-dot dot-red"></span>
         {% elif p.urgencia == 'atencao' %}<span class="urgencia-dot dot-amber"></span>
         {% else %}<span class="urgencia-dot dot-green"></span>{% endif %}
       </td>
-      <td style="font-weight:500">{{ p.tipo }}</td>
-      <td style="font-family:monospace;font-size:11px">{{ p.processo.numero if p.processo else '—' }}</td>
-      <td style="{% if p.urgencia in ['urgente','vencido'] %}color:var(--red);font-weight:600{% elif p.urgencia=='atencao' %}color:var(--amber);font-weight:600{% endif %}">
+
+      <td style="font-weight:500;font-size:12px">
+        {{ p.tipo }}
+        {% if p.status == 'Cumprido' %}<span class="pill pill-green" style="font-size:9px;margin-left:4px">✓</span>{% endif %}
+      </td>
+
+      <td style="font-size:11px">
+        {% if p.origem == 'publicacao' %}
+          <span style="color:var(--text3)">📋 PJe</span>
+        {% elif p.origem == 'agenda' %}
+          <span style="color:var(--text3)">📅 Agenda</span>
+        {% else %}
+          <span style="color:var(--text3)">✏️ Manual</span>
+        {% endif %}
+      </td>
+
+      <td>
+        {% if p.processo %}
+          <a href="/processos/{{ p.processo.id }}" style="font-family:monospace;font-size:10.5px;color:var(--blue);font-weight:600;text-decoration:none">{{ p.processo.numero }}</a>
+          <div style="display:flex;gap:5px;margin-top:3px;align-items:center">
+            {% if p.processo.polo == 'Autor' %}
+            <span style="font-size:9px;font-weight:700;color:#1a56db;background:#e8f0fe;border:1px solid #bdd0fb;border-radius:3px;padding:0 5px">⚖️ Autor</span>
+            {% elif p.processo.polo == 'Réu' %}
+            <span style="font-size:9px;font-weight:700;color:#7c3aed;background:#ede9fe;border:1px solid #c4b5fd;border-radius:3px;padding:0 5px">🛡️ Réu</span>
+            {% endif %}
+            {% if p.processo.cliente %}
+            <span style="font-size:10px;color:var(--text3)">{{ p.processo.cliente.nome }}</span>
+            {% endif %}
+            <span style="font-size:10px;color:var(--text3)">· {{ p.processo.tipo }}</span>
+          </div>
+        {% else %}
+          <span style="color:var(--text3);font-size:11px">— processo não cadastrado</span>
+        {% endif %}
+      </td>
+
+      <td style="{% if dr < 0 %}color:var(--red);font-weight:700{% elif p.urgencia=='urgente' %}color:var(--red);font-weight:600{% elif p.urgencia=='atencao' %}color:var(--amber);font-weight:600{% endif %};font-size:12px;white-space:nowrap">
         {{ p.data_venc.strftime('%d/%m/%Y') }}
       </td>
-      <td>
-        {% if p.dias_restantes < 0 %}<span class="pill pill-red">VENCIDO</span>
-        {% elif p.dias_restantes == 0 %}<span class="pill pill-red">Hoje</span>
-        {% elif p.dias_restantes == 1 %}<span class="pill pill-red">Amanhã</span>
-        {% elif p.dias_restantes <= 7 %}<span class="pill pill-amber">{{ p.dias_restantes }} dias</span>
-        {% else %}<span class="pill pill-green">{{ p.dias_restantes }} dias</span>{% endif %}
+
+      <td style="min-width:120px">
+        <div style="display:flex;align-items:center;gap:8px">
+          {% if p.status == 'Cumprido' %}
+            <span class="pill pill-green">✓ Cumprido</span>
+          {% elif dr < 0 %}
+            <span class="pill pill-red">VENCIDO {{ dr|abs }} d</span>
+          {% elif dr == 0 %}
+            <span class="pill pill-red">HOJE</span>
+          {% elif dr == 1 %}
+            <span class="pill pill-red">AMANHÃ</span>
+          {% elif dr <= 7 %}
+            <span class="pill pill-amber">{{ dr }} dias</span>
+          {% else %}
+            <span class="pill pill-green">{{ dr }} dias</span>
+          {% endif %}
+
+          {# Barra de progresso #}
+          {% if p.data_inicio and p.dias and p.status != 'Cumprido' %}
+            {% set passados = (hoje - p.data_inicio).days %}
+            {% set pct = [(passados / p.dias * 100)|int, 0]|max %}
+            {% set pct = [pct, 100]|min %}
+            <div style="width:48px;height:4px;background:var(--border2);border-radius:2px;flex-shrink:0">
+              <div style="width:{{ pct }}%;height:100%;border-radius:2px;background:{% if pct >= 90 %}var(--red){% elif pct >= 60 %}var(--amber){% else %}var(--green){% endif %}"></div>
+            </div>
+          {% endif %}
+        </div>
       </td>
-      <td><span class="pill pill-gray">{{ p.contagem }}</span></td>
-      <td><button class="btn btn-green btn-sm" onclick="cumprir({{ p.id }})">✓ Cumprido</button></td>
+
+      <td>
+        {% if p.status != 'Cumprido' %}
+        <button class="btn btn-green btn-sm" onclick="abrirCumprir({{ p.id }})">✓ Cumprido</button>
+        {% endif %}
+      </td>
     </tr>
+
+    {# Linha de observação do cumprimento #}
+    {% if p.status == 'Cumprido' and p.obs_cumprimento %}
+    <tr style="background:#f0fdf4">
+      <td></td>
+      <td colspan="6" style="font-size:11px;color:#166534;padding-top:0;padding-bottom:6px">
+        📝 {{ p.obs_cumprimento }}
+        {% if p.data_cumprimento %}<span style="color:var(--text3)"> — {{ p.data_cumprimento.strftime('%d/%m/%Y') }}</span>{% endif %}
+      </td>
+    </tr>
+    {% endif %}
+
     {% else %}
-    <tr><td colspan="7" style="text-align:center;padding:2rem;color:var(--text3)">Nenhum prazo pendente. ✅</td></tr>
+    <tr><td colspan="7" style="text-align:center;padding:2rem;color:var(--text3)">Nenhum prazo encontrado para os filtros aplicados.</td></tr>
     {% endfor %}
     </tbody>
   </table>
 </div>
 
-{% if cumpridos %}
+{# ── Histórico de cumpridos (só na view padrão) ───────────────────────────── #}
+{% if cumpridos and not status %}
 <div class="card">
-  <div class="card-header"><span class="card-title">Histórico de Cumpridos</span></div>
+  <div class="card-header"><span class="card-title">Histórico Recente de Cumpridos</span></div>
   <table>
-    <thead><tr><th>Tipo</th><th>Processo</th><th>Vencimento</th><th>Status</th></tr></thead>
+    <thead><tr><th>Tipo</th><th>Processo · Polo · Cliente</th><th>Vencimento</th><th>Cumprido em</th><th>Observação</th></tr></thead>
     <tbody>
     {% for p in cumpridos %}
     <tr>
-      <td>{{ p.tipo }}</td>
-      <td style="font-family:monospace;font-size:11px">{{ p.processo.numero if p.processo else '—' }}</td>
-      <td>{{ p.data_venc.strftime('%d/%m/%Y') }}</td>
-      <td><span class="pill pill-green">Cumprido</span></td>
+      <td style="font-size:12px;font-weight:500">{{ p.tipo }}</td>
+      <td>
+        {% if p.processo %}
+          <span style="font-family:monospace;font-size:10.5px;color:var(--blue)">{{ p.processo.numero }}</span>
+          <div style="display:flex;gap:5px;margin-top:2px;align-items:center">
+            {% if p.processo.polo == 'Autor' %}<span style="font-size:9px;font-weight:700;color:#1a56db;background:#e8f0fe;border:1px solid #bdd0fb;border-radius:3px;padding:0 5px">⚖️ Autor</span>
+            {% elif p.processo.polo == 'Réu' %}<span style="font-size:9px;font-weight:700;color:#7c3aed;background:#ede9fe;border:1px solid #c4b5fd;border-radius:3px;padding:0 5px">🛡️ Réu</span>{% endif %}
+            {% if p.processo.cliente %}<span style="font-size:10px;color:var(--text3)">{{ p.processo.cliente.nome }}</span>{% endif %}
+          </div>
+        {% else %}<span style="color:var(--text3);font-size:11px">— sem processo</span>{% endif %}
+      </td>
+      <td style="font-size:12px">{{ p.data_venc.strftime('%d/%m/%Y') }}</td>
+      <td style="font-size:12px">{{ p.data_cumprimento.strftime('%d/%m/%Y') if p.data_cumprimento else '—' }}</td>
+      <td style="font-size:11px;color:var(--text3)">{{ p.obs_cumprimento or '—' }}</td>
     </tr>
     {% endfor %}
     </tbody>
   </table>
 </div>
 {% endif %}
+
+{# ── Mini-modal: marcar cumprido com observação ───────────────────────────── #}
+<div class="modal-backdrop" id="modal-cumprir">
+  <div class="modal" style="max-width:400px">
+    <div class="modal-header">
+      <div class="modal-title">Marcar como Cumprido</div>
+      <button class="modal-close" onclick="fecharCumprir()">✕</button>
+    </div>
+    <input type="hidden" id="cumprir-id">
+    <div class="form-group">
+      <label>Data do cumprimento</label>
+      <input type="date" id="cumprir-data">
+    </div>
+    <div class="form-group">
+      <label>Observação (opcional)</label>
+      <textarea id="cumprir-obs" rows="2" placeholder="Ex: petição protocolada, protocolo nº 12345..."></textarea>
+    </div>
+    <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:.75rem">
+      <button class="btn btn-outline" onclick="fecharCumprir()">Cancelar</button>
+      <button class="btn btn-green" onclick="confirmarCumprir()">✓ Confirmar</button>
+    </div>
+  </div>
+</div>
+
 {% endblock %}
 {% block scripts %}
 <script>
-async function cumprir(id){
-  if(!confirm('Marcar prazo como cumprido?')) return;
-  const r = await fetch(`/prazos/${id}/cumprir`, {method:'POST'});
-  if((await r.json()).ok){ document.getElementById('prazo-'+id).style.opacity='.3'; setTimeout(()=>location.reload(),500); }
+function abrirCumprir(id) {
+  document.getElementById('cumprir-id').value = id;
+  document.getElementById('cumprir-data').value = new Date().toISOString().split('T')[0];
+  document.getElementById('cumprir-obs').value  = '';
+  document.getElementById('modal-cumprir').classList.add('open');
+}
+function fecharCumprir() {
+  document.getElementById('modal-cumprir').classList.remove('open');
+}
+async function confirmarCumprir() {
+  const id  = document.getElementById('cumprir-id').value;
+  const obs  = document.getElementById('cumprir-obs').value.trim();
+  const data = document.getElementById('cumprir-data').value;
+  const r = await fetch(`/prazos/${id}/cumprir`, {
+    method:  'POST',
+    headers: {'Content-Type':'application/json'},
+    body:    JSON.stringify({ obs, data_cumprimento: data }),
+  });
+  if ((await r.json()).ok) {
+    fecharCumprir();
+    const row = document.getElementById('prazo-' + id);
+    if (row) { row.style.opacity = '.3'; row.style.transition = 'opacity .4s'; }
+    setTimeout(() => location.reload(), 500);
+  }
 }
 </script>
 {% endblock %}
